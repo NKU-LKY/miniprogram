@@ -102,3 +102,23 @@ export function updateLastLogin(userId: string): User | undefined {
   saveUsers(users)
   return users[index]
 }
+
+export function updateUserRole(userId: string, role: User['role']): User | null {
+  const users = getAllUsers()
+  const index = users.findIndex((u) => u.user_id === userId)
+  if (index < 0) return null
+
+  users[index] = { ...users[index], role }
+  saveUsers(users)
+  return users[index]
+}
+
+export function updateUserStatus(userId: string, status: User['status']): User | null {
+  const users = getAllUsers()
+  const index = users.findIndex((u) => u.user_id === userId)
+  if (index < 0) return null
+
+  users[index] = { ...users[index], status }
+  saveUsers(users)
+  return users[index]
+}

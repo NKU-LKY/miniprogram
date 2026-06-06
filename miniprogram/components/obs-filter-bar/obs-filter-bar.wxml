@@ -1,0 +1,29 @@
+<view class="filter-bar">
+  <picker
+    mode="selector"
+    range="{{speciesOptions}}"
+    range-key="label"
+    value="{{speciesIndex}}"
+    bindchange="onSpeciesChange"
+  >
+    <view class="filter-chip {{speciesIndex > 0 ? 'active' : ''}}">
+      <text class="filter-label">{{speciesOptions[speciesIndex].label}}</text>
+      <text class="filter-arrow">▾</text>
+    </view>
+  </picker>
+
+  <picker
+    mode="selector"
+    range="{{timeOptions}}"
+    range-key="label"
+    value="{{timeIndex}}"
+    bindchange="onTimeChange"
+  >
+    <view class="filter-chip {{timeIndex > 0 ? 'active' : ''}}">
+      <text class="filter-label">{{timeOptions[timeIndex].label}}</text>
+      <text class="filter-arrow">▾</text>
+    </view>
+  </picker>
+
+  <view class="filter-reset" wx:if="{{showReset}}" bindtap="onReset">重置</view>
+</view>

@@ -3,7 +3,12 @@
     "pages/login/login",
     "pages/register/register",
     "pages/index/index",
+    "pages/map/map",
     "pages/publish/publish",
+    "pages/detail/detail",
+    "pages/species/species",
+    "pages/admin/users/users",
+    "pages/admin/moderation/moderation",
     "pages/logs/logs"
   ],
   "window": {
@@ -26,7 +31,7 @@
   "lazyCodeLoading": "requiredComponents",
   "permission": {
     "scope.userLocation": {
-      "desc": "用于自动填写观测地点"
+      "desc": "用于自动填写观测地点和在地图上显示当前位置"
     }
   },
   "requiredPrivateInfos": [

@@ -1,0 +1,88 @@
+<navigation-bar title="校园地图" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<view class="page-body">
+  <view class="toolbar">
+    <text class="toolbar-title">观测分布</text>
+    <view class="toolbar-actions">
+      <view class="mode-btn {{viewMode === 'map' ? 'active' : ''}}" data-mode="map" bindtap="onSwitchMode">地图</view>
+      <view class="mode-btn {{viewMode === 'list' ? 'active' : ''}}" data-mode="list" bindtap="onSwitchMode">列表</view>
+    </view>
+  </view>
+
+  <obs-filter-bar
+    species-options="{{speciesOptions}}"
+    time-options="{{timeOptions}}"
+    species-index="{{speciesIndex}}"
+    time-index="{{timeIndex}}"
+    show-reset="{{filterActive}}"
+    bind:change="onFilterChange"
+    bind:reset="onResetFilter"
+  />
+
+  <block wx:if="{{viewMode === 'map'}}">
+    <map
+      id="campusMap"
+      class="campus-map"
+      latitude="{{center.latitude}}"
+      longitude="{{center.longitude}}"
+      scale="{{scale}}"
+      markers="{{markers}}"
+      show-location
+      enable-zoom
+      enable-scroll
+      enable-rotate="{{false}}"
+      enable-cluster
+      bindmarkertap="onMarkerTap"
+      bindcallouttap="onMarkerTap"
+      binderror="onMapError"
+    ></map>
+
+    <view class="locate-btn {{locating ? 'disabled' : ''}}" bindtap="onLocateMe">
+      <text class="locate-icon">◎</text>
+    </view>
+
+    <view class="map-hint">
+      <text wx:if="{{locating}}">正在定位到当前位置…</text>
+      <text wx:elif="{{useCampusFallback}}">未获取到定位，当前显示校园演示区域；点击标记查看详情</text>
+      <text wx:elif="{{mapItems.length > 0}}">共 {{mapItems.length}} 条记录，点击标记进入详情</text>
+      <text wx:elif="{{filterActive}}">没有符合筛选条件的观测点</text>
+      <text wx:else>蓝点为你的位置，发布观测后标记会出现在地图上</text>
+    </view>
+  </block>
+
+  <scroll-view wx:else class="list-area" scroll-y type="list">
+    <view
+      class="list-item"
+      wx:for="{{mapItems}}"
+      wx:key="obs_id"
+      data-id="{{item.obs_id}}"
+      bindtap="onListItemTap"
+    >
+      <image class="list-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
+      <view class="list-body">
+        <view class="list-top">
+          <text class="list-label">{{item.marker_label}}</text>
+          <text class="list-species">{{item.species_name || '待鉴定'}}</text>
+        </view>
+        <text class="list-note">{{item.note || '暂无描述'}}</text>
+        <view class="list-meta">
+          <text class="list-location">📍 {{item.location_name}}</text>
+          <text class="list-time">{{item.time_text}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{mapItems.length === 0 && filterActive}}">
+      <text class="empty-icon">🔍</text>
+      <text class="empty-title">没有符合筛选条件的观测点</text>
+      <text class="empty-desc">试试调整物种或时间范围</text>
+      <view class="empty-btn" bindtap="onResetFilter">清除筛选</view>
+    </view>
+
+    <view class="empty" wx:elif="{{mapItems.length === 0}}">
+      <text class="empty-icon">🗺</text>
+      <text class="empty-title">还没有可展示的观测点</text>
+      <text class="empty-desc">发布第一条观测记录后，它们会出现在地图上</text>
+    </view>
+  </scroll-view>
+</view>

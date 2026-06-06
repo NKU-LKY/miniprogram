@@ -1,0 +1,165 @@
+page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f9f0;
+}
+
+.page-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.scrollarea {
+  flex: 1;
+  min-height: 0;
+  padding: 16rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.page-tip {
+  font-size: 22rpx;
+  color: #9ab09b;
+  margin-bottom: 16rpx;
+  padding: 0 4rpx;
+}
+
+.loading,
+.empty,
+.forbidden {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 40rpx;
+  color: #9ab09b;
+  font-size: 28rpx;
+}
+
+.forbidden-icon {
+  font-size: 72rpx;
+  margin-bottom: 20rpx;
+}
+
+.forbidden-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #2d5a2e;
+  margin-bottom: 8rpx;
+}
+
+.forbidden-desc {
+  font-size: 24rpx;
+  color: #9ab09b;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  margin-bottom: 12rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 12rpx rgba(45, 90, 46, 0.06);
+}
+
+.user-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+  background: #eef5e8;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-top {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 4rpx;
+}
+
+.user-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #2d5a2e;
+}
+
+.self-tag {
+  font-size: 18rpx;
+  color: #4c8c4a;
+  background: #eef8ec;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+.user-account {
+  display: block;
+  font-size: 22rpx;
+  color: #9ab09b;
+  margin-bottom: 8rpx;
+}
+
+.user-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.role-tag {
+  font-size: 20rpx;
+  color: #3a6ea5;
+  background: #e8f0fa;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+
+.role-tag.disabled {
+  color: #9ab09b;
+  background: #f0f4ef;
+}
+
+.status-tag {
+  font-size: 20rpx;
+  color: #4a6b4b;
+  background: #eef5e8;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+
+.status-tag.banned {
+  color: #c45c5c;
+  background: #fff0f0;
+}
+
+.login-time {
+  font-size: 20rpx;
+  color: #9ab09b;
+}
+
+.ban-btn {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  padding: 12rpx 20rpx;
+  font-size: 24rpx;
+  color: #c45c5c;
+  background: #fff5f5;
+  border-radius: 8rpx;
+}
+
+.ban-btn.unban {
+  color: #4c8c4a;
+  background: #eef8ec;
+}
+
+.ban-btn:active {
+  opacity: 0.85;
+}

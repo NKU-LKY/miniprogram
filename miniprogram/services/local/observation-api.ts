@@ -1,12 +1,19 @@
 import { SEED_OBSERVATIONS } from '../../data/observations.seed'
+import { getLocationByName } from '../../data/locations'
 import type {
   CreateObservationParams,
   FeedListResult,
+  MapObservationItem,
   Observation,
+  ObservationDetailItem,
   ObservationFeedItem,
   ObservationStatus,
 } from '../../types/observation'
-import { formatRelativeTime } from '../../utils/time'
+import type { FilterOption, ObservationFilterParams } from '../../utils/observation-filter'
+import { applyObservationFilter, collectSpeciesOptions } from '../../utils/observation-filter'
+import { getSpeciesMarkerLabel } from '../../utils/map-markers'
+import { formatFullTime, formatRelativeTime } from '../../utils/time'
+import { isObservationLiked, listObservationComments } from './interaction-api'
 import { addObservation, buildSeedObservations, getAllObservations } from './observation-store'
 import { findUserById } from './user-store'
 
@@ -69,15 +76,49 @@ function paginate(all: Observation[], page: number, pageSize: number): FeedListR
   }
 }
 
-export function listFeed(page: number, pageSize: number): FeedListResult {
-  return paginate(getFeedObservations(), page, pageSize)
+export function listFeed(
+  page: number,
+  pageSize: number,
+  filter?: ObservationFilterParams,
+): FeedListResult {
+  const filtered = applyObservationFilter(getFeedObservations(), filter)
+  return paginate(filtered, page, pageSize)
 }
 
-export function listMyFeed(userId: string, page: number, pageSize: number): FeedListResult {
+export function getObservationDetail(
+  obsId: string,
+  viewerUserId?: string,
+): ObservationDetailItem | null {
+  const obs = getAllObservations().find((item) => item.obs_id === obsId)
+  if (!obs) return null
+
+  const isOwner = Boolean(viewerUserId && obs.user_id === viewerUserId)
+  const viewer = viewerUserId ? findUserById(viewerUserId) : undefined
+  const isAdmin = viewer?.role === 'admin'
+  if ((obs.status === 'rejected' || obs.status === 'pending_review') && !isOwner && !isAdmin) {
+    return null
+  }
+
+  const feedItem = toFeedItem(obs)
+  return {
+    ...feedItem,
+    time_full: formatFullTime(obs.submitted_at),
+    liked: isObservationLiked(obsId, viewerUserId),
+    comments: listObservationComments(obsId),
+  }
+}
+
+export function listMyFeed(
+  userId: string,
+  page: number,
+  pageSize: number,
+  filter?: ObservationFilterParams,
+): FeedListResult {
   const all = getAllObservations()
     .filter((obs) => obs.user_id === userId)
     .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-  return paginate(all, page, pageSize)
+  const filtered = applyObservationFilter(all, filter)
+  return paginate(filtered, page, pageSize)
 }
 
 function resolveStatus(params: CreateObservationParams): ObservationStatus {
@@ -85,6 +126,39 @@ function resolveStatus(params: CreateObservationParams): ObservationStatus {
     return 'needs_identification'
   }
   return 'approved'
+}
+
+export function getFeedSpeciesOptions(): FilterOption[] {
+  return collectSpeciesOptions(getFeedObservations())
+}
+
+export function getMySpeciesOptions(userId: string): FilterOption[] {
+  const all = getAllObservations()
+    .filter((obs) => obs.user_id === userId)
+    .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+  return collectSpeciesOptions(all)
+}
+
+export function listMapObservations(filter?: ObservationFilterParams): MapObservationItem[] {
+  return applyObservationFilter(getFeedObservations(), filter)
+    .map((obs) => {
+      const point = getLocationByName(obs.location_name)
+      if (!point) return null
+
+      return {
+        obs_id: obs.obs_id,
+        photo_url: obs.photo_url,
+        note: obs.note,
+        location_name: obs.location_name,
+        species_name: obs.species_name,
+        latitude: point.latitude,
+        longitude: point.longitude,
+        marker_label: getSpeciesMarkerLabel(obs.species_name),
+        submitted_at: obs.submitted_at,
+        time_text: formatRelativeTime(obs.submitted_at),
+      } satisfies MapObservationItem
+    })
+    .filter((item): item is MapObservationItem => item !== null)
 }
 
 export function createObservation(params: CreateObservationParams): ObservationFeedItem {

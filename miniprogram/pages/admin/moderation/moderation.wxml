@@ -1,0 +1,90 @@
+<navigation-bar title="内容管控" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<view class="page-body">
+  <view class="forbidden" wx:if="{{forbidden}}">
+    <text class="forbidden-icon">🔒</text>
+    <text class="forbidden-title">无访问权限</text>
+    <text class="forbidden-desc">仅管理员可进行内容管控</text>
+  </view>
+
+  <block wx:else>
+    <view class="tab-bar">
+      <view
+        class="tab-item {{activeTab === 'observations' ? 'active' : ''}}"
+        data-tab="observations"
+        bindtap="onTabChange"
+      >观测记录</view>
+      <view
+        class="tab-item {{activeTab === 'comments' ? 'active' : ''}}"
+        data-tab="comments"
+        bindtap="onTabChange"
+      >评论</view>
+    </view>
+
+    <scroll-view class="scrollarea" scroll-y type="list">
+      <view class="loading" wx:if="{{loading}}">
+        <text>加载中...</text>
+      </view>
+
+      <block wx:if="{{activeTab === 'observations' && !loading}}">
+        <view class="obs-card" wx:for="{{obsList}}" wx:key="obs_id">
+          <image
+            class="obs-thumb"
+            src="{{item.photo_url}}"
+            mode="aspectFill"
+            data-id="{{item.obs_id}}"
+            bindtap="onGoDetail"
+          ></image>
+          <view class="obs-body">
+            <text class="obs-note">{{item.note}}</text>
+            <view class="obs-meta">
+              <text class="meta-text">{{item.publisher_nickname}} · {{item.time_text}}</text>
+              <text class="status-tag {{item.is_hidden ? 'hidden' : ''}}">{{item.status_label}}</text>
+            </view>
+            <view class="action-row">
+              <view
+                wx:if="{{!item.is_hidden}}"
+                class="action-btn hide"
+                data-id="{{item.obs_id}}"
+                bindtap="onHideObservation"
+              >隐藏</view>
+              <view
+                wx:else
+                class="action-btn restore"
+                data-id="{{item.obs_id}}"
+                bindtap="onRestoreObservation"
+              >恢复</view>
+              <view class="action-btn link" data-id="{{item.obs_id}}" bindtap="onGoDetail">查看</view>
+            </view>
+          </view>
+        </view>
+
+        <view class="empty" wx:if="{{obsList.length === 0}}">
+          <text>暂无观测记录</text>
+        </view>
+      </block>
+
+      <block wx:if="{{activeTab === 'comments' && !loading}}">
+        <view class="comment-card" wx:for="{{commentList}}" wx:key="comment_id">
+          <view class="comment-top">
+            <text class="comment-author">{{item.author_nickname}}</text>
+            <text class="comment-time">{{item.time_text}}</text>
+          </view>
+          <text class="comment-content">{{item.content}}</text>
+          <view class="action-row">
+            <view
+              class="action-btn hide"
+              data-id="{{item.comment_id}}"
+              bindtap="onHideComment"
+            >隐藏</view>
+            <view class="action-btn link" data-id="{{item.obs_id}}" bindtap="onGoDetail">查看记录</view>
+          </view>
+        </view>
+
+        <view class="empty" wx:if="{{commentList.length === 0}}">
+          <text>暂无评论</text>
+        </view>
+      </block>
+    </scroll-view>
+  </block>
+</view>

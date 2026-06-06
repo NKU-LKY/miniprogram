@@ -78,6 +78,43 @@ page {
   color: #7a9a7b;
 }
 
+.map-entry {
+  display: flex;
+  align-items: center;
+  margin: 0 20rpx 16rpx;
+  padding: 18rpx 20rpx;
+  background: linear-gradient(135deg, #eef8ec 0%, #f5faf3 100%);
+  border-radius: 12rpx;
+  border: 1rpx solid #dce8dc;
+}
+
+.map-entry:active {
+  opacity: 0.85;
+}
+
+.map-entry-icon {
+  font-size: 36rpx;
+  margin-right: 12rpx;
+}
+
+.map-entry-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2d5a2e;
+  margin-right: 12rpx;
+}
+
+.map-entry-desc {
+  flex: 1;
+  font-size: 22rpx;
+  color: #7a9a7b;
+}
+
+.map-entry-arrow {
+  font-size: 32rpx;
+  color: #9ab09b;
+}
+
 .tab-bar {
   display: flex;
   border-top: 1rpx solid #f0f4ef;
@@ -87,7 +124,7 @@ page {
   flex: 1;
   text-align: center;
   padding: 20rpx 0;
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #7a9a7b;
 }
 
@@ -116,6 +153,11 @@ page {
   text-align: center;
 }
 
+.menu-item.admin {
+  color: #2d5a2e;
+  border-bottom: 1rpx solid #f0f4ef;
+}
+
 .menu-item:active {
   background: #faf5f5;
 }
@@ -135,6 +177,79 @@ page {
   min-height: 0;
   width: 100%;
   overflow-y: hidden;
+}
+
+.species-card {
+  margin: 12rpx 16rpx 0;
+  padding: 20rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 12rpx rgba(45, 90, 46, 0.06);
+}
+
+.species-card:active {
+  opacity: 0.9;
+}
+
+.species-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.species-icon {
+  font-size: 44rpx;
+  margin-right: 14rpx;
+  flex-shrink: 0;
+}
+
+.species-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.species-name {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #2d5a2e;
+  margin-bottom: 4rpx;
+}
+
+.species-count {
+  display: block;
+  font-size: 22rpx;
+  color: #9ab09b;
+}
+
+.species-arrow {
+  font-size: 32rpx;
+  color: #9ab09b;
+  flex-shrink: 0;
+}
+
+.species-photos {
+  display: flex;
+  gap: 10rpx;
+  margin-bottom: 14rpx;
+}
+
+.species-photo {
+  flex: 1;
+  height: 140rpx;
+  border-radius: 8rpx;
+  background: #eef5e8;
+}
+
+.species-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.species-info-item {
+  font-size: 22rpx;
+  color: #5a7a5b;
 }
 
 .list-status-bar {

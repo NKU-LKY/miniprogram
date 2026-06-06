@@ -13,8 +13,17 @@
         </view>
 
         <view class="user-menu" wx:if="{{showUserMenu}}">
+          <view wx:if="{{isAdmin}}" class="menu-item admin" bindtap="onGoAdminUsers">用户管理</view>
+          <view wx:if="{{isAdmin}}" class="menu-item admin" bindtap="onGoAdminModeration">内容管控</view>
           <view class="menu-item" bindtap="onLogout">退出登录</view>
         </view>
+      </view>
+
+      <view class="map-entry" bindtap="onGoMap">
+        <text class="map-entry-icon">🗺</text>
+        <text class="map-entry-text">校园地图</text>
+        <text class="map-entry-desc">查看观测分布</text>
+        <text class="map-entry-arrow">›</text>
       </view>
 
       <view class="tab-bar">
@@ -28,9 +37,25 @@
           data-tab="mine"
           bindtap="onTabChange"
         >上传记录</view>
+        <view
+          class="tab-item {{activeTab === 'species' ? 'active' : ''}}"
+          data-tab="species"
+          bindtap="onTabChange"
+        >物种档案</view>
       </view>
     </view>
   </view>
+
+  <obs-filter-bar
+    wx:if="{{activeTab !== 'species'}}"
+    species-options="{{speciesOptions}}"
+    time-options="{{timeOptions}}"
+    species-index="{{speciesIndex}}"
+    time-index="{{timeIndex}}"
+    show-reset="{{filterActive}}"
+    bind:change="onFilterChange"
+    bind:reset="onResetFilter"
+  />
 
   <scroll-view
     class="scrollarea"
@@ -75,7 +100,14 @@
         <text>加载中...</text>
       </view>
 
-      <view class="empty" wx:if="{{!loading && feedList.length === 0}}">
+      <view class="empty" wx:if="{{!loading && feedList.length === 0 && filterActive}}">
+        <text class="empty-icon">🔍</text>
+        <text class="empty-title">没有符合筛选条件的记录</text>
+        <text class="empty-desc">试试调整物种或时间范围</text>
+        <button class="empty-btn" bindtap="onResetFilter">清除筛选</button>
+      </view>
+
+      <view class="empty" wx:elif="{{!loading && feedList.length === 0}}">
         <text class="empty-icon">🌿</text>
         <text class="empty-title">还没有人分享校园里的小动物和花草</text>
         <text class="empty-desc">快来当第一个发现者吧</text>
@@ -115,7 +147,14 @@
         <text>加载中...</text>
       </view>
 
-      <view class="empty" wx:if="{{!myLoading && myList.length === 0}}">
+      <view class="empty" wx:if="{{!myLoading && myList.length === 0 && filterActive}}">
+        <text class="empty-icon">🔍</text>
+        <text class="empty-title">没有符合筛选条件的记录</text>
+        <text class="empty-desc">试试调整物种或时间范围</text>
+        <button class="empty-btn" bindtap="onResetFilter">清除筛选</button>
+      </view>
+
+      <view class="empty" wx:elif="{{!myLoading && myList.length === 0}}">
         <text class="empty-icon">📷</text>
         <text class="empty-title">你还没有上传过观测记录</text>
         <text class="empty-desc">发布第一条发现，解锁你的校园图鉴</text>
@@ -123,7 +162,53 @@
       </view>
     </block>
 
-    <view class="list-status-bar">
+    <block wx:if="{{activeTab === 'species'}}">
+      <view
+        class="species-card"
+        wx:for="{{speciesList}}"
+        wx:key="species_name"
+        data-name="{{item.species_name}}"
+        bindtap="onSpeciesTap"
+      >
+        <view class="species-header">
+          <text class="species-icon">{{item.marker_label}}</text>
+          <view class="species-meta">
+            <text class="species-name">{{item.species_name}}</text>
+            <text class="species-count">共 {{item.record_count}} 条记录 · {{item.latest_time_text}}</text>
+          </view>
+          <text class="species-arrow">›</text>
+        </view>
+
+        <view class="species-photos" wx:if="{{item.preview_photos.length > 0}}">
+          <image
+            class="species-photo"
+            wx:for="{{item.preview_photos}}"
+            wx:for-item="photo"
+            wx:key="*this"
+            src="{{photo}}"
+            mode="aspectFill"
+          ></image>
+        </view>
+
+        <view class="species-info">
+          <text class="species-info-item" wx:if="{{item.top_location}}">📍 常去：{{item.top_location}}</text>
+          <text class="species-info-item" wx:if="{{item.is_animal && item.active_periods}}">🕐 活跃：{{item.active_periods}}</text>
+        </view>
+      </view>
+
+      <view class="loading" wx:if="{{speciesLoading && speciesList.length === 0}}">
+        <text>加载中...</text>
+      </view>
+
+      <view class="empty" wx:if="{{!speciesLoading && speciesList.length === 0}}">
+        <text class="empty-icon">📚</text>
+        <text class="empty-title">还没有可汇总的物种档案</text>
+        <text class="empty-desc">上传带物种标注的观测记录后会自动生成</text>
+        <button wx:if="{{isObserver}}" class="empty-btn" bindtap="onGoPublish">上传观测记录</button>
+      </view>
+    </block>
+
+    <view class="list-status-bar" wx:if="{{activeTab !== 'species'}}">
       <block wx:if="{{showStatusBar}}">
         <text wx:if="{{statusBarLoading}}">加载中...</text>
         <text wx:elif="{{statusBarHasMore}}">上滑加载更多</text>

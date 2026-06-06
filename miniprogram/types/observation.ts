@@ -1,3 +1,5 @@
+import type { ObservationCommentItem } from './comment'
+
 /** 观测记录状态 */
 export type ObservationStatus =
   | 'approved'
@@ -46,6 +48,13 @@ export interface FeedListResult {
   hasMore: boolean
 }
 
+/** 观测记录详情页展示数据 */
+export interface ObservationDetailItem extends ObservationFeedItem {
+  time_full: string
+  liked: boolean
+  comments: ObservationCommentItem[]
+}
+
 /** 提交新观测记录参数 */
 export interface CreateObservationParams {
   user_id: string
@@ -54,4 +63,18 @@ export interface CreateObservationParams {
   note?: string
   species_name?: string
   needs_identification: boolean
+}
+
+/** 地图页观测标记 */
+export interface MapObservationItem {
+  obs_id: string
+  photo_url: string
+  note: string
+  location_name: string
+  species_name?: string
+  latitude: number
+  longitude: number
+  marker_label: string
+  submitted_at: string
+  time_text: string
 }

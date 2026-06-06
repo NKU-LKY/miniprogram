@@ -1,0 +1,117 @@
+<navigation-bar title="观测详情" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<view class="page-wrap" wx:if="{{!loading && !unavailable && detail}}">
+  <scroll-view class="page" scroll-y type="list">
+    <view class="photo-section" bindtap="onPreviewPhoto">
+      <image class="hero-photo" src="{{detail.photo_url}}" mode="aspectFill"></image>
+      <text class="photo-hint">点击查看大图</text>
+    </view>
+
+    <view class="rejected-banner" wx:if="{{detail.is_rejected}}">
+      <text class="rejected-title">该记录已被隐藏</text>
+      <text class="rejected-desc">该内容不再对外展示</text>
+    </view>
+
+    <view class="admin-bar" wx:if="{{isAdmin}}">
+      <view
+        wx:if="{{!isHidden}}"
+        class="admin-btn hide"
+        bindtap="onHideObservation"
+      >隐藏此记录</view>
+      <view
+        wx:else
+        class="admin-btn restore"
+        bindtap="onRestoreObservation"
+      >恢复此记录</view>
+    </view>
+
+    <view class="publisher-card">
+      <image class="publisher-avatar" src="{{detail.publisher_avatar_url}}" mode="aspectFill"></image>
+      <view class="publisher-meta">
+        <text class="publisher-name">{{detail.publisher_nickname}}</text>
+        <text class="publisher-time">{{detail.time_full}} · {{detail.time_text}}</text>
+      </view>
+    </view>
+
+    <view class="content-card">
+      <text class="note-text">{{detail.note}}</text>
+
+      <view class="meta-row">
+        <text class="meta-item">📍 {{detail.location_name}}</text>
+        <text class="meta-item" wx:if="{{detail.species_name}}">🌿 {{detail.species_name}}</text>
+      </view>
+
+      <view class="status-row" wx:if="{{detail.status_label}}">
+        <text class="status-tag">{{detail.status_label}}</text>
+      </view>
+
+      <view class="stats-row">
+        <view class="stat-action {{detail.liked ? 'liked' : ''}}" bindtap="onToggleLike">
+          <text class="stat-icon">{{detail.liked ? '♥' : '♡'}}</text>
+          <text class="stat-text">{{detail.like_count}}</text>
+        </view>
+        <view class="stat-action readonly">
+          <text class="stat-icon">💬</text>
+          <text class="stat-text">{{detail.comment_count}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="comments-section">
+      <text class="section-title">评论 {{detail.comment_count}}</text>
+
+      <view class="comment-list" wx:if="{{comments.length > 0}}">
+        <view class="comment-item" wx:for="{{comments}}" wx:key="comment_id">
+          <image class="comment-avatar" src="{{item.author_avatar_url}}" mode="aspectFill"></image>
+          <view class="comment-body">
+            <view class="comment-top">
+              <text class="comment-author">{{item.author_nickname}}</text>
+              <text class="expert-tag" wx:if="{{item.is_expert}}">认证专家</text>
+              <text class="comment-time">{{item.time_text}}</text>
+            </view>
+            <text class="comment-content">{{item.content}}</text>
+            <view
+              wx:if="{{isAdmin}}"
+              class="comment-hide-btn"
+              data-id="{{item.comment_id}}"
+              bindtap="onHideComment"
+            >隐藏</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="comments-empty" wx:else>
+        <text class="comments-empty-icon">💬</text>
+        <text class="comments-empty-text">暂无评论，快来抢沙发吧</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="comment-bar">
+    <input
+      class="comment-input"
+      placeholder="说点什么……"
+      maxlength="200"
+      value="{{commentInput}}"
+      confirm-type="send"
+      bindinput="onCommentInput"
+      bindconfirm="onSubmitComment"
+    />
+    <view
+      class="send-btn {{commentInput ? 'active' : ''}}"
+      bindtap="onSubmitComment"
+    >发送</view>
+  </view>
+</view>
+
+<scroll-view class="page page-fallback" scroll-y type="list" wx:else>
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="unavailable" wx:elif="{{unavailable}}">
+    <text class="unavailable-icon">🔒</text>
+    <text class="unavailable-title">该内容暂不可查看</text>
+    <text class="unavailable-desc">记录可能已被隐藏或不存在</text>
+  </view>
+</scroll-view>

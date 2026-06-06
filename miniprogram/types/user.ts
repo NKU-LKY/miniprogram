@@ -40,3 +40,22 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   reviewer: '审阅员',
   admin: '管理员',
 }
+
+export const STATUS_LABELS: Record<UserStatus, string> = {
+  active: '正常',
+  banned: '已封禁',
+}
+
+/** 管理员用户列表展示项 */
+export interface AdminUserListItem {
+  user_id: string
+  nickname: string
+  avatar_url: string
+  username?: string
+  role: UserRole
+  role_label: string
+  status: UserStatus
+  status_label: string
+  last_login_text: string
+  is_self: boolean
+}

@@ -1,0 +1,57 @@
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 12rpx 16rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #e8ede8;
+}
+
+.filter-chip {
+  display: flex;
+  align-items: center;
+  max-width: 220rpx;
+  padding: 10rpx 16rpx;
+  border-radius: 24rpx;
+  background: #f5f9f0;
+  border: 1rpx solid #e0ebe0;
+}
+
+.filter-chip.active {
+  background: #eef5e8;
+  border-color: #b8d4b8;
+}
+
+.filter-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: #4a6b4b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-chip.active .filter-label {
+  color: #2d5a2e;
+  font-weight: 500;
+}
+
+.filter-arrow {
+  flex-shrink: 0;
+  margin-left: 6rpx;
+  font-size: 18rpx;
+  color: #9ab09b;
+}
+
+.filter-reset {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 10rpx 16rpx;
+  font-size: 24rpx;
+  color: #4c8c4a;
+}
+
+.filter-reset:active {
+  opacity: 0.7;
+}

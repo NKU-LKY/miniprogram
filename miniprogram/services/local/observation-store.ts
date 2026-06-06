@@ -42,3 +42,16 @@ export function addObservation(
   setLocalItem(OBSERVATIONS_KEY, [observation, ...all])
   return observation
 }
+
+export function updateObservation(
+  obsId: string,
+  patch: Partial<Pick<Observation, 'like_count' | 'comment_count' | 'status'>>,
+): Observation | null {
+  const all = getAllObservations()
+  const index = all.findIndex((obs) => obs.obs_id === obsId)
+  if (index < 0) return null
+
+  all[index] = { ...all[index], ...patch }
+  setLocalItem(OBSERVATIONS_KEY, all)
+  return all[index]
+}

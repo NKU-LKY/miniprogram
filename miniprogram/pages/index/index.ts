@@ -1,14 +1,25 @@
-import { listFeed, listMyFeed } from '../../services/local/observation-api'
+import { findUserById } from '../../services/local/user-store'
+import { getFeedSpeciesOptions, getMySpeciesOptions, listFeed, listMyFeed } from '../../services/local/observation-api'
+import { listSpeciesArchives } from '../../services/local/species-api'
 import type { ObservationFeedItem } from '../../types/observation'
+import type { SpeciesArchiveSummary } from '../../types/species'
 import { ROLE_LABELS } from '../../types/user'
-import { clearSession, getCurrentUser } from '../../utils/session'
+import {
+  buildFilterParams,
+  isFilterActive,
+  TIME_RANGE_OPTIONS,
+  type FilterOption,
+  type ObservationFilterParams,
+  type TimeFilterOption,
+} from '../../utils/observation-filter'
+import { clearSession, getCurrentUser, refreshSessionUser } from '../../utils/session'
 
 /** 每页 6 条，与一屏可见数量一致，上滑加载下一页 */
 const PAGE_SIZE = 6
 
 const REFRESH_FEED_KEY = 'campus_bio_refresh_feed'
 
-type ActiveTab = 'feed' | 'mine'
+type ActiveTab = 'feed' | 'mine' | 'species'
 
 interface FlatFeedItem {
   obs_id: string
@@ -63,22 +74,42 @@ Page({
     showUserMenu: false,
     refreshing: false,
     isObserver: false,
+    isAdmin: false,
+    speciesOptions: [{ label: '全部物种', value: '' }] as FilterOption[],
+    timeOptions: TIME_RANGE_OPTIONS as TimeFilterOption[],
+    speciesIndex: 0,
+    timeIndex: 0,
+    filterActive: false,
+    speciesList: [] as SpeciesArchiveSummary[],
+    speciesLoading: false,
+    speciesLoaded: false,
   },
 
   onLoad() {
     if (!this.ensureLoggedIn()) return
     this.syncUserInfo()
+    this.refreshFilterOptions()
     this.loadFeed(true)
   },
 
   onShow() {
     if (!this.ensureLoggedIn()) return
     this.syncUserInfo()
+    this.refreshFilterOptions()
     this.handlePublishReturn()
+    if (this.data.activeTab === 'species' && this.data.speciesLoaded) {
+      this.loadSpeciesArchives()
+    }
   },
 
   ensureLoggedIn(): boolean {
-    if (!getCurrentUser()) {
+    const refreshed = refreshSessionUser((userId) => {
+      const user = findUserById(userId)
+      if (!user) return null
+      const { password_hash: _, ...safe } = user
+      return safe
+    })
+    if (!refreshed) {
       wx.redirectTo({ url: '/pages/login/login' })
       return false
     }
@@ -94,14 +125,25 @@ Page({
       avatarUrl: user.avatar_url || '',
       roleLabel: ROLE_LABELS[user.role] || '',
       isObserver: user.role === 'observer',
+      isAdmin: user.role === 'admin',
     })
+  },
+
+  onGoAdminUsers() {
+    this.setData({ showUserMenu: false })
+    wx.navigateTo({ url: '/pages/admin/users/users' })
+  },
+
+  onGoAdminModeration() {
+    this.setData({ showUserMenu: false })
+    wx.navigateTo({ url: '/pages/admin/moderation/moderation' })
   },
 
   handlePublishReturn() {
     try {
       if (!wx.getStorageSync(REFRESH_FEED_KEY)) return
       wx.removeStorageSync(REFRESH_FEED_KEY)
-      this.setData({ activeTab: 'feed', myLoaded: false })
+      this.setData({ activeTab: 'feed', myLoaded: false, speciesLoaded: false })
       this.loadFeed(true)
     } catch (err) {
       // ignore storage errors
@@ -110,6 +152,58 @@ Page({
 
   onGoPublish() {
     wx.navigateTo({ url: '/pages/publish/publish' })
+  },
+
+  onGoMap() {
+    wx.navigateTo({ url: '/pages/map/map' })
+  },
+
+  refreshFilterOptions() {
+    const user = getCurrentUser()
+    const speciesOptions =
+      this.data.activeTab === 'feed'
+        ? getFeedSpeciesOptions()
+        : getMySpeciesOptions(user?.user_id || '')
+
+    const speciesIndex = Math.min(this.data.speciesIndex, Math.max(speciesOptions.length - 1, 0))
+
+    this.setData({
+      speciesOptions,
+      speciesIndex,
+      filterActive: isFilterActive(speciesIndex, this.data.timeIndex),
+    })
+  },
+
+  getCurrentFilter(): ObservationFilterParams {
+    const { speciesOptions, speciesIndex, timeOptions, timeIndex } = this.data
+    return buildFilterParams(speciesOptions[speciesIndex], timeOptions[timeIndex])
+  },
+
+  onFilterChange(e: WechatMiniprogram.CustomEvent) {
+    const { type, index } = e.detail as { type: 'species' | 'time'; index: number }
+    const speciesIndex = type === 'species' ? index : this.data.speciesIndex
+    const timeIndex = type === 'time' ? index : this.data.timeIndex
+
+    this.setData({
+      speciesIndex,
+      timeIndex,
+      filterActive: isFilterActive(speciesIndex, timeIndex),
+    })
+
+    if (this.data.activeTab === 'feed') {
+      this.loadFeed(true)
+    } else {
+      this.loadMyFeed(true)
+    }
+  },
+
+  onResetFilter() {
+    this.setData({ speciesIndex: 0, timeIndex: 0, filterActive: false })
+    if (this.data.activeTab === 'feed') {
+      this.loadFeed(true)
+    } else {
+      this.loadMyFeed(true)
+    }
   },
 
   updateStatusBar() {
@@ -156,12 +250,37 @@ Page({
     this.setData({
       activeTab: tab,
       showUserMenu: false,
+      speciesIndex: 0,
+      timeIndex: 0,
+      filterActive: false,
     })
 
-    if (tab === 'mine' && !this.data.myLoaded) {
+    this.refreshFilterOptions()
+
+    if (tab === 'mine') {
       this.loadMyFeed(true)
+    } else if (tab === 'species') {
+      this.loadSpeciesArchives()
     } else {
-      this.updateStatusBar()
+      this.loadFeed(true)
+    }
+  },
+
+  loadSpeciesArchives() {
+    this.setData({ speciesLoading: true })
+
+    try {
+      const speciesList = listSpeciesArchives()
+      this.setData({
+        speciesList,
+        speciesLoading: false,
+        speciesLoaded: true,
+        refreshing: false,
+      })
+    } catch (err) {
+      console.error('loadSpeciesArchives error:', err)
+      wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+      this.setData({ speciesLoading: false, refreshing: false })
     }
   },
 
@@ -174,9 +293,10 @@ Page({
     }
 
     const page = reset ? 1 : this.data.page
+    const filter = this.getCurrentFilter()
 
     try {
-      const result = listFeed(page, PAGE_SIZE)
+      const result = listFeed(page, PAGE_SIZE, filter)
       const newItems = result.list.map(flattenItem)
       const feedList = reset ? newItems : this.data.feedList.concat(newItems)
 
@@ -213,9 +333,10 @@ Page({
     }
 
     const page = reset ? 1 : this.data.myPage
+    const filter = this.getCurrentFilter()
 
     try {
-      const result = listMyFeed(user.user_id, page, PAGE_SIZE)
+      const result = listMyFeed(user.user_id, page, PAGE_SIZE, filter)
       const newItems = result.list.map(flattenItem)
       const myList = reset ? newItems : this.data.myList.concat(newItems)
 
@@ -245,23 +366,31 @@ Page({
     this.setData({ refreshing: true })
     if (this.data.activeTab === 'feed') {
       this.loadFeed(true)
-    } else {
+    } else if (this.data.activeTab === 'mine') {
       this.loadMyFeed(true)
+    } else {
+      this.loadSpeciesArchives()
     }
   },
 
   onLoadMore() {
     if (this.data.activeTab === 'feed') {
       this.loadFeed(false)
-    } else {
+    } else if (this.data.activeTab === 'mine') {
       this.loadMyFeed(false)
     }
   },
 
+  onSpeciesTap(e: WechatMiniprogram.TouchEvent) {
+    const speciesName = e.currentTarget.dataset.name as string
+    if (!speciesName) return
+    wx.navigateTo({ url: `/pages/species/species?name=${encodeURIComponent(speciesName)}` })
+  },
+
   onCardTap(e: WechatMiniprogram.TouchEvent) {
     const obsId = e.currentTarget.dataset.id as string
-    wx.showToast({ title: '详情页开发中', icon: 'none' })
-    console.log('card tap:', obsId)
+    if (!obsId) return
+    wx.navigateTo({ url: `/pages/detail/detail?id=${obsId}` })
   },
 
   onAvatarTap() {
