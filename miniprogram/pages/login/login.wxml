@@ -1,0 +1,82 @@
+<navigation-bar title="登录" back="{{false}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<scroll-view class="page" scroll-y type="list">
+  <view class="header">
+    <view class="logo-wrap">
+      <text class="logo-icon">🌿</text>
+    </view>
+    <text class="title">校园动植物志</text>
+    <text class="subtitle">记录校园里的小生命，共建数字化图鉴</text>
+  </view>
+
+  <!-- 角色切换 -->
+  <view class="role-tabs">
+    <view
+      class="role-tab {{activeRole === 'observer' ? 'active' : ''}}"
+      data-role="observer"
+      bindtap="onRoleChange"
+    >观测者</view>
+    <view
+      class="role-tab {{activeRole === 'reviewer' ? 'active' : ''}}"
+      data-role="reviewer"
+      bindtap="onRoleChange"
+    >审阅员</view>
+    <view
+      class="role-tab {{activeRole === 'admin' ? 'active' : ''}}"
+      data-role="admin"
+      bindtap="onRoleChange"
+    >管理员</view>
+  </view>
+
+  <!-- 观测者登录 -->
+  <view class="card" wx:if="{{activeRole === 'observer'}}">
+    <text class="card-title">微信一键登录</text>
+    <text class="card-desc">在校学生可通过微信授权注册成为观测者/贡献者，记录校园里的动植物发现。</text>
+
+    <button class="btn-primary" loading="{{loading}}" bindtap="onObserverLogin">
+      已有账号，直接登录
+    </button>
+    <button class="btn-outline" bindtap="goRegister">
+      新用户注册
+    </button>
+  </view>
+
+  <!-- 审阅员 / 管理员登录 -->
+  <view class="card" wx:else>
+    <text class="card-title">{{activeRole === 'reviewer' ? '审阅员' : '管理员'}}账号登录</text>
+    <text class="card-desc">请使用平台分配的专用账号密码登录后台。</text>
+
+    <view class="form-item">
+      <text class="label">账号</text>
+      <input
+        class="input"
+        placeholder="请输入账号"
+        value="{{username}}"
+        bindinput="onUsernameInput"
+      />
+    </view>
+    <view class="form-item">
+      <text class="label">密码</text>
+      <input
+        class="input"
+        password
+        placeholder="请输入密码"
+        value="{{password}}"
+        bindinput="onPasswordInput"
+      />
+    </view>
+
+    <button class="btn-primary" loading="{{loading}}" bindtap="onStaffLogin">
+      登录
+    </button>
+
+    <view class="hint-box" wx:if="{{activeRole === 'reviewer'}}">
+      <text class="hint-title">演示账号</text>
+      <text class="hint-text">账号：reviewer  密码：reviewer123</text>
+    </view>
+    <view class="hint-box" wx:else>
+      <text class="hint-title">演示账号</text>
+      <text class="hint-text">账号：admin  密码：admin123</text>
+    </view>
+  </view>
+</scroll-view>

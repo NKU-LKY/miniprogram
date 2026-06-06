@@ -1,0 +1,32 @@
+<view class="card" wx:if="{{card}}" bindtap="onTap">
+  <view class="publisher">
+    <image class="avatar" src="{{card.publisher.avatar_url}}" mode="aspectFill"></image>
+    <view class="publisher-meta">
+      <text class="nickname">{{card.publisher.nickname}}</text>
+      <text class="time">{{card.time_text}}</text>
+    </view>
+    <view class="status-tag" wx:if="{{card.status_label}}">{{card.status_label}}</view>
+  </view>
+
+  <image class="photo" src="{{card.photo_url}}" mode="aspectFill"></image>
+
+  <view class="content">
+    <text class="note" wx:if="{{card.note}}">{{card.note}}</text>
+    <view class="location">
+      <text class="location-icon">📍</text>
+      <text class="location-text">{{card.location_name}}</text>
+      <text class="species" wx:if="{{card.species_name}}">· {{card.species_name}}</text>
+    </view>
+  </view>
+
+  <view class="footer">
+    <view class="stat">
+      <text class="stat-icon">♥</text>
+      <text class="stat-num">{{card.like_count}}</text>
+    </view>
+    <view class="stat">
+      <text class="stat-icon">💬</text>
+      <text class="stat-num">{{card.comment_count}}</text>
+    </view>
+  </view>
+</view>

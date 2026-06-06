@@ -1,8 +1,10 @@
 /// <reference path="./types/index.d.ts" />
 
+import type { SafeUser } from '../miniprogram/types/user'
+
 interface IAppOption {
   globalData: {
-    userInfo?: WechatMiniprogram.UserInfo,
+    currentUser: SafeUser | null
   }
-  userInfoReadyCallback?: WechatMiniprogram.GetUserInfoSuccessCallback,
+  setCurrentUser(user: SafeUser | null): void
 }

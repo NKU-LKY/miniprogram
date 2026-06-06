@@ -1,6 +1,9 @@
 {
   "pages": [
+    "pages/login/login",
+    "pages/register/register",
     "pages/index/index",
+    "pages/publish/publish",
     "pages/logs/logs"
   ],
   "window": {
@@ -20,5 +23,13 @@
   },
   "componentFramework": "glass-easel",
   "sitemapLocation": "sitemap.json",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于自动填写观测地点"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation"
+  ]
 }

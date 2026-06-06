@@ -1,28 +1,140 @@
-<!--index.wxml-->
-<navigation-bar title="Weixin" back="{{false}}" color="black" background="#FFF"></navigation-bar>
-<scroll-view class="scrollarea" scroll-y type="list">
-  <view class="container">
-    <view class="userinfo">
-      <block wx:if="{{canIUseNicknameComp && !hasUserInfo}}">
-        <button class="avatar-wrapper" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
-          <image class="avatar" src="{{userInfo.avatarUrl}}"></image>
-        </button>
-        <view class="nickname-wrapper">
-          <text class="nickname-label">昵称</text>
-          <input type="nickname" class="nickname-input" placeholder="请输入昵称" bind:change="onInputChange" />
+<navigation-bar extClass="nav-bar-slot" title="校园动植物志" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<view class="page-body">
+  <view class="page-header">
+    <view class="user-panel">
+      <view class="user-info-row">
+        <view class="avatar-wrap" bindtap="onAvatarTap">
+          <image class="user-avatar" src="{{avatarUrl}}" mode="aspectFill"></image>
         </view>
-      </block>
-      <block wx:elif="{{!hasUserInfo}}">
-        <button wx:if="{{canIUseGetUserProfile}}" bindtap="getUserProfile"> 获取头像昵称 </button>
-        <view wx:else> 请使用2.10.4及以上版本基础库 </view>
-      </block>
-      <block wx:else>
-        <image bindtap="bindViewTap" class="userinfo-avatar" src="{{userInfo.avatarUrl}}" mode="cover"></image>
-        <text class="userinfo-nickname">{{userInfo.nickName}}</text>
-      </block>
-    </view>
-    <view class="usermotto">
-      <text class="user-motto">{{motto}}</text>
+        <view class="user-meta">
+          <text class="user-name">{{nickname}}</text>
+          <text class="user-role">{{roleLabel}}</text>
+        </view>
+
+        <view class="user-menu" wx:if="{{showUserMenu}}">
+          <view class="menu-item" bindtap="onLogout">退出登录</view>
+        </view>
+      </view>
+
+      <view class="tab-bar">
+        <view
+          class="tab-item {{activeTab === 'feed' ? 'active' : ''}}"
+          data-tab="feed"
+          bindtap="onTabChange"
+        >最新分享</view>
+        <view
+          class="tab-item {{activeTab === 'mine' ? 'active' : ''}}"
+          data-tab="mine"
+          bindtap="onTabChange"
+        >上传记录</view>
+      </view>
     </view>
   </view>
-</scroll-view>
+
+  <scroll-view
+    class="scrollarea"
+    scroll-y
+    type="list"
+    refresher-enabled
+    refresher-triggered="{{refreshing}}"
+    bind:refresherrefresh="onPullDownRefresh"
+    bind:scrolltolower="onLoadMore"
+    lower-threshold="100"
+  >
+    <block wx:if="{{activeTab === 'feed'}}">
+      <view
+        class="obs-card"
+        wx:for="{{feedList}}"
+        wx:key="obs_id"
+        bindtap="onCardTap"
+        data-id="{{item.obs_id}}"
+      >
+        <image class="obs-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
+        <view class="obs-body">
+          <view class="obs-top">
+            <image class="publisher-avatar-sm" src="{{item.publisher_avatar_url}}" mode="aspectFill"></image>
+            <text class="publisher-name">{{item.publisher_nickname}}</text>
+            <text class="publisher-time">{{item.time_text}}</text>
+          </view>
+          <text class="obs-note">{{item.note}}</text>
+          <view class="obs-bottom">
+            <view class="obs-location">
+              <text class="location-text">📍 {{item.location_name}}</text>
+              <text class="species-text" wx:if="{{item.species_name}}">· {{item.species_name}}</text>
+            </view>
+            <view class="obs-stats">
+              <text class="stat-item">♥ {{item.like_count}}</text>
+              <text class="stat-item">💬 {{item.comment_count}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="loading" wx:if="{{loading && feedList.length === 0}}">
+        <text>加载中...</text>
+      </view>
+
+      <view class="empty" wx:if="{{!loading && feedList.length === 0}}">
+        <text class="empty-icon">🌿</text>
+        <text class="empty-title">还没有人分享校园里的小动物和花草</text>
+        <text class="empty-desc">快来当第一个发现者吧</text>
+        <button wx:if="{{isObserver}}" class="empty-btn" bindtap="onGoPublish">发布第一条发现</button>
+      </view>
+    </block>
+
+    <block wx:if="{{activeTab === 'mine'}}">
+      <view
+        class="obs-card"
+        wx:for="{{myList}}"
+        wx:key="obs_id"
+        bindtap="onCardTap"
+        data-id="{{item.obs_id}}"
+      >
+        <image class="obs-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
+        <view class="obs-body">
+          <view class="obs-top">
+            <text class="status-tag" wx:if="{{item.status_label}}">{{item.status_label}}</text>
+            <text class="publisher-time">{{item.time_text}}</text>
+          </view>
+          <text class="obs-note">{{item.note}}</text>
+          <view class="obs-bottom">
+            <view class="obs-location">
+              <text class="location-text">📍 {{item.location_name}}</text>
+              <text class="species-text" wx:if="{{item.species_name}}">· {{item.species_name}}</text>
+            </view>
+            <view class="obs-stats">
+              <text class="stat-item">♥ {{item.like_count}}</text>
+              <text class="stat-item">💬 {{item.comment_count}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="loading" wx:if="{{myLoading && myList.length === 0}}">
+        <text>加载中...</text>
+      </view>
+
+      <view class="empty" wx:if="{{!myLoading && myList.length === 0}}">
+        <text class="empty-icon">📷</text>
+        <text class="empty-title">你还没有上传过观测记录</text>
+        <text class="empty-desc">发布第一条发现，解锁你的校园图鉴</text>
+        <button wx:if="{{isObserver}}" class="empty-btn" bindtap="onGoPublish">上传观测记录</button>
+      </view>
+    </block>
+
+    <view class="list-status-bar">
+      <block wx:if="{{showStatusBar}}">
+        <text wx:if="{{statusBarLoading}}">加载中...</text>
+        <text wx:elif="{{statusBarHasMore}}">上滑加载更多</text>
+        <text wx:else>— 没有更多了 —</text>
+      </block>
+    </view>
+  </scroll-view>
+</view>
+
+<view class="fab-publish" wx:if="{{isObserver}}" bindtap="onGoPublish">
+  <text class="fab-icon">+</text>
+</view>
+
+<view class="menu-mask" wx:if="{{showUserMenu}}" bindtap="onCloseMenu"></view>

@@ -1,0 +1,83 @@
+<navigation-bar title="发布观测" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<view class="page">
+  <view class="photo-section" bindtap="onChoosePhoto">
+    <image
+      wx:if="{{photoPath}}"
+      class="photo-preview"
+      src="{{photoPath}}"
+      mode="aspectFill"
+    ></image>
+    <view class="photo-placeholder" wx:else>
+      <text class="photo-icon">📷</text>
+      <text class="photo-tip">点击上传照片</text>
+      <text class="photo-sub">拍摄或从相册选择</text>
+    </view>
+  </view>
+
+  <view class="form-card">
+    <view class="field">
+      <text class="field-label">一句话描述</text>
+      <textarea
+        class="field-textarea"
+        placeholder="说说你看到了什么……"
+        maxlength="200"
+        value="{{note}}"
+        bindinput="onNoteInput"
+        auto-height
+        show-confirm-bar="{{false}}"
+      ></textarea>
+    </view>
+
+    <view class="field">
+      <text class="field-label">观测地点</text>
+      <view class="location-row">
+        <view class="location-display">
+          <text class="location-icon">📍</text>
+          <text wx:if="{{locating}}" class="location-text muted">正在定位…</text>
+          <text wx:elif="{{locationName}}" class="location-text">{{locationName}}</text>
+          <text wx:else class="location-text muted">{{locationFailed ? '定位失败，请从下方选择' : '等待定位'}}</text>
+        </view>
+        <view class="relocate-btn {{locating ? 'disabled' : ''}}" bindtap="locateByDevice">
+          <text>{{locating ? '定位中' : '重新定位'}}</text>
+        </view>
+      </view>
+      <picker
+        mode="selector"
+        range="{{locationOptions}}"
+        value="{{locationIndex >= 0 ? locationIndex : 0}}"
+        bindchange="onLocationChange"
+      >
+        <view class="picker-value picker-sub">
+          <text class="picker-sub-label">手动调整地点</text>
+          <text class="picker-arrow">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="field-label">物种名称（选填）</text>
+      <input
+        class="field-input"
+        placeholder="{{needsIdentification ? '初步猜测，如：橘猫' : '如：橘猫、银杏'}}"
+        maxlength="20"
+        value="{{speciesName}}"
+        bindinput="onSpeciesInput"
+      />
+    </view>
+
+    <view class="switch-row">
+      <view class="switch-meta">
+        <text class="switch-title">不确定是什么物种？求鉴定</text>
+        <text class="switch-desc">开启后将进入待鉴定队列</text>
+      </view>
+      <switch
+        checked="{{needsIdentification}}"
+        color="#4c8c4a"
+        bindchange="onIdentificationChange"
+      />
+    </view>
+  </view>
+
+  <button class="btn-publish" loading="{{submitting}}" bindtap="onPublish">发布</button>
+</view>

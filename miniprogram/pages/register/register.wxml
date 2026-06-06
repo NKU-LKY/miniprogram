@@ -1,0 +1,36 @@
+<navigation-bar title="注册" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<scroll-view class="page" scroll-y type="list">
+  <view class="header">
+    <text class="title">成为观测者</text>
+    <text class="subtitle">设置头像和昵称，开始记录校园里的动植物</text>
+  </view>
+
+  <view class="card">
+    <view class="avatar-section">
+      <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+        <image class="avatar" src="{{avatarUrl}}" mode="aspectFill"></image>
+        <text class="avatar-tip">点击选择头像</text>
+      </button>
+    </view>
+
+    <view class="form-item">
+      <text class="label">昵称</text>
+      <input
+        type="nickname"
+        class="input"
+        placeholder="给自己起个昵称吧"
+        value="{{nickname}}"
+        bindinput="onNicknameInput"
+      />
+    </view>
+
+    <view class="agreement">
+      <text class="agreement-text">注册即表示同意平台隐私政策，你的观测数据仅用于校园生物多样性记录。</text>
+    </view>
+
+    <button class="btn-primary" loading="{{loading}}" bindtap="onRegister">
+      完成注册
+    </button>
+  </view>
+</scroll-view>

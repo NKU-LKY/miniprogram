@@ -1,0 +1,109 @@
+.card {
+  background: #fff;
+  border-radius: 24rpx;
+  overflow: hidden;
+  margin-bottom: 24rpx;
+  box-shadow: 0 8rpx 24rpx rgba(45, 90, 46, 0.06);
+}
+
+.publisher {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 28rpx 16rpx;
+}
+
+.avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+  border: 2rpx solid #e8f0e8;
+}
+
+.publisher-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.nickname {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #2d5a2e;
+  margin-bottom: 4rpx;
+}
+
+.time {
+  display: block;
+  font-size: 22rpx;
+  color: #9ab09b;
+}
+
+.status-tag {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  color: #3a6ea5;
+  background: #e8f0fa;
+  padding: 6rpx 16rpx;
+  border-radius: 16rpx;
+}
+
+.photo {
+  width: 100%;
+  height: 400rpx;
+  display: block;
+  background: #eef5e8;
+}
+
+.content {
+  padding: 20rpx 28rpx 12rpx;
+}
+
+.note {
+  display: block;
+  font-size: 30rpx;
+  color: #333;
+  line-height: 1.5;
+  margin-bottom: 12rpx;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.location-icon {
+  font-size: 22rpx;
+  margin-right: 6rpx;
+}
+
+.location-text,
+.species {
+  font-size: 24rpx;
+  color: #7a9a7b;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 28rpx 24rpx;
+  gap: 32rpx;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stat-icon {
+  font-size: 26rpx;
+  color: #9ab09b;
+}
+
+.stat-num {
+  font-size: 24rpx;
+  color: #7a9a7b;
+}

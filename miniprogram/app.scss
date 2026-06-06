@@ -7,4 +7,24 @@
   justify-content: space-between;
   padding: 200rpx 0;
   box-sizing: border-box;
-} 
+}
+
+/* 统一修正小程序 button 默认内边距导致的文字偏下问题 */
+button.btn-primary,
+button.btn-outline,
+button.btn-logout,
+button.btn-logout-bottom {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  box-sizing: border-box;
+}
+
+button.btn-primary::after,
+button.btn-outline::after,
+button.btn-logout::after,
+button.btn-logout-bottom::after {
+  border: none;
+}
