@@ -1,4 +1,5 @@
 import { countPendingIdentification } from '../../services/local/identification-api'
+import { getUnreadNotificationCount } from '../../services/local/notification-api'
 import { findUserById } from '../../services/local/user-store'
 import { getFeedSpeciesOptions, getMySpeciesOptions, listFeed, listMyFeed } from '../../services/local/observation-api'
 import { listSpeciesArchives } from '../../services/local/species-api'
@@ -80,6 +81,7 @@ Page({
     isReviewer: false,
     isAdmin: false,
     pendingIdentificationCount: 0,
+    hasUnreadNotifications: false,
     speciesOptions: [{ label: '全部物种', value: '' }] as FilterOption[],
     timeOptions: TIME_RANGE_OPTIONS as TimeFilterOption[],
     speciesIndex: 0,
@@ -135,6 +137,7 @@ Page({
       isReviewer,
       isAdmin: user.role === 'admin',
       pendingIdentificationCount: isReviewer ? countPendingIdentification() : 0,
+      hasUnreadNotifications: getUnreadNotificationCount(user.user_id) > 0,
     })
   },
 

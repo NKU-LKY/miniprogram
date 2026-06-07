@@ -1,4 +1,4 @@
-import type { ObservationCommentItem } from './comment'
+import type { ObservationCommentThreadItem } from './comment'
 
 /** 观测记录状态 */
 export type ObservationStatus =
@@ -71,7 +71,7 @@ export interface FeedListResult {
 export interface ObservationDetailItem extends ObservationFeedItem {
   time_full: string
   liked: boolean
-  comments: ObservationCommentItem[]
+  comments: ObservationCommentThreadItem[]
 }
 
 /** 提交新观测记录参数 */

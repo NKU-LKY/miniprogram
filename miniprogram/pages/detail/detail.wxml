@@ -161,30 +161,60 @@
       <text class="section-title">评论 {{detail.comment_count}}</text>
 
       <view class="comment-list" wx:if="{{comments.length > 0}}">
-        <view class="comment-item" wx:for="{{comments}}" wx:key="comment_id">
-          <image class="comment-avatar" src="{{item.author_avatar_url}}" mode="aspectFill"></image>
-          <view class="comment-body">
-            <view class="comment-top">
-              <text class="comment-author">{{item.author_nickname}}</text>
-              <text class="expert-tag" wx:if="{{item.is_expert}}">认证专家</text>
-              <text class="comment-time">{{item.time_text}}</text>
+        <view class="comment-thread" wx:for="{{comments}}" wx:key="comment_id">
+          <view class="comment-item">
+            <image class="comment-avatar" src="{{item.author_avatar_url}}" mode="aspectFill"></image>
+            <view class="comment-body">
+              <view class="comment-top">
+                <text class="comment-author">{{item.author_nickname}}</text>
+                <text class="expert-tag" wx:if="{{item.is_expert}}">认证专家</text>
+                <text class="comment-time">{{item.time_text}}</text>
+              </view>
+              <text class="comment-content">{{item.content}}</text>
+              <view class="comment-actions">
+                <text
+                  class="reply-btn"
+                  data-id="{{item.comment_id}}"
+                  data-nickname="{{item.author_nickname}}"
+                  catchtap="onReplyComment"
+                >回复</text>
+                <view
+                  wx:if="{{isAdmin}}"
+                  class="comment-hide-btn"
+                  data-id="{{item.comment_id}}"
+                  bindtap="onHideComment"
+                >隐藏</view>
+              </view>
             </view>
-            <text class="comment-content">
-              <text wx:if="{{item.reply_to_nickname}}" class="reply-prefix">回复 @{{item.reply_to_nickname}}：</text>{{item.content}}
-            </text>
-            <view class="comment-actions">
-              <text
-                class="reply-btn"
-                data-id="{{item.comment_id}}"
-                data-nickname="{{item.author_nickname}}"
-                catchtap="onReplyComment"
-              >回复</text>
-              <view
-                wx:if="{{isAdmin}}"
-                class="comment-hide-btn"
-                data-id="{{item.comment_id}}"
-                bindtap="onHideComment"
-              >隐藏</view>
+          </view>
+
+          <view class="reply-list" wx:if="{{item.replies.length > 0}}">
+            <view class="reply-item" wx:for="{{item.replies}}" wx:for-item="reply" wx:key="comment_id">
+              <image class="reply-avatar" src="{{reply.author_avatar_url}}" mode="aspectFill"></image>
+              <view class="comment-body">
+                <view class="comment-top">
+                  <text class="comment-author">{{reply.author_nickname}}</text>
+                  <text class="expert-tag" wx:if="{{reply.is_expert}}">认证专家</text>
+                  <text class="comment-time">{{reply.time_text}}</text>
+                </view>
+                <text class="comment-content">
+                  <text wx:if="{{reply.reply_to_nickname}}" class="reply-prefix">回复 @{{reply.reply_to_nickname}}：</text>{{reply.content}}
+                </text>
+                <view class="comment-actions">
+                  <text
+                    class="reply-btn"
+                    data-id="{{reply.comment_id}}"
+                    data-nickname="{{reply.author_nickname}}"
+                    catchtap="onReplyComment"
+                  >回复</text>
+                  <view
+                    wx:if="{{isAdmin}}"
+                    class="comment-hide-btn"
+                    data-id="{{reply.comment_id}}"
+                    bindtap="onHideComment"
+                  >隐藏</view>
+                </view>
+              </view>
             </view>
           </view>
         </view>

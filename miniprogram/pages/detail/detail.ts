@@ -8,6 +8,7 @@ import {
 } from '../../services/local/identification-api'
 import {
   createObservationComment,
+  listObservationCommentThreads,
   toggleObservationLike,
 } from '../../services/local/interaction-api'
 import {
@@ -16,7 +17,7 @@ import {
   restoreObservationForAdmin,
   setObservationFeaturedForAdmin,
 } from '../../services/local/admin-api'
-import type { ObservationCommentItem } from '../../types/comment'
+import type { ObservationCommentThreadItem } from '../../types/comment'
 import type { ObservationDetailItem } from '../../types/observation'
 import { canIdentifySpecies } from '../../utils/permissions'
 import { getCurrentUser } from '../../utils/session'
@@ -57,6 +58,16 @@ interface CommentView {
   author_nickname: string
   author_avatar_url: string
   is_expert: boolean
+  replies: CommentReplyView[]
+}
+
+interface CommentReplyView {
+  comment_id: string
+  content: string
+  time_text: string
+  author_nickname: string
+  author_avatar_url: string
+  is_expert: boolean
   reply_to_nickname: string
 }
 
@@ -73,7 +84,7 @@ interface AppealView {
   time_text: string
 }
 
-function toCommentView(item: ObservationCommentItem): CommentView {
+function toCommentReplyView(item: ObservationCommentThreadItem['replies'][number]): CommentReplyView {
   return {
     comment_id: item.comment_id,
     content: item.content,
@@ -82,6 +93,18 @@ function toCommentView(item: ObservationCommentItem): CommentView {
     author_avatar_url: item.author_avatar_url,
     is_expert: item.is_expert,
     reply_to_nickname: item.reply_to_nickname || '',
+  }
+}
+
+function toCommentThreadView(item: ObservationCommentThreadItem): CommentView {
+  return {
+    comment_id: item.comment_id,
+    content: item.content,
+    time_text: item.time_text,
+    author_nickname: item.author_nickname,
+    author_avatar_url: item.author_avatar_url,
+    is_expert: item.is_expert,
+    replies: item.replies.map(toCommentReplyView),
   }
 }
 
@@ -195,7 +218,7 @@ Page({
         loading: false,
         unavailable: false,
         detail: toDetailView(result),
-        comments: result.comments.map(toCommentView),
+        comments: result.comments.map(toCommentThreadView),
         isAdmin: Boolean(user && user.role === 'admin'),
         isOwner,
         isReviewer,
@@ -301,7 +324,7 @@ Page({
       }
 
       this.setData({
-        comments: this.data.comments.concat(toCommentView(result.comment)),
+        comments: listObservationCommentThreads(this.data.obsId).map(toCommentThreadView),
         commentInput: '',
         replyTarget: null,
         commentPlaceholder: '说点什么……',

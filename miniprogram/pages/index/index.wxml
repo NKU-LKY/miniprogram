@@ -6,6 +6,7 @@
       <view class="user-info-row">
         <view class="avatar-wrap" bindtap="onAvatarTap">
           <image class="user-avatar" src="{{avatarUrl}}" mode="aspectFill"></image>
+          <view class="avatar-dot" wx:if="{{hasUnreadNotifications}}"></view>
         </view>
         <view class="user-meta">
           <text class="user-name">{{nickname}}</text>
@@ -13,7 +14,10 @@
         </view>
 
         <view class="user-menu" wx:if="{{showUserMenu}}">
-          <view class="menu-item profile" bindtap="onGoProfile">个人中心</view>
+          <view class="menu-item profile" bindtap="onGoProfile">
+            <text>个人中心</text>
+            <view class="menu-dot" wx:if="{{hasUnreadNotifications}}"></view>
+          </view>
           <view wx:if="{{isReviewer}}" class="menu-item reviewer" bindtap="onGoReviewerQueue">
             待鉴定队列{{pendingIdentificationCount > 0 ? ' (' + pendingIdentificationCount + ')' : ''}}
           </view>

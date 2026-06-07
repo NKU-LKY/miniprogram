@@ -13,7 +13,7 @@ import type { FilterOption, ObservationFilterParams } from '../../utils/observat
 import { applyObservationFilter, collectSpeciesOptions } from '../../utils/observation-filter'
 import { getSpeciesMarkerLabel } from '../../utils/map-markers'
 import { formatFullTime, formatRelativeTime } from '../../utils/time'
-import { isObservationLiked, listObservationComments } from './interaction-api'
+import { isObservationLiked, listObservationCommentThreads } from './interaction-api'
 import { isObservationFeatured, setObservationFeatured } from './featured-store'
 import {
   addObservation,
@@ -131,7 +131,7 @@ export function getObservationDetail(
     ...feedItem,
     time_full: formatFullTime(obs.submitted_at),
     liked: isObservationLiked(trimmedId, viewerUserId),
-    comments: listObservationComments(trimmedId),
+    comments: listObservationCommentThreads(trimmedId),
   }
 }
 

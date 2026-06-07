@@ -1,4 +1,8 @@
-import type { ObservationCommentItem } from '../../types/comment'
+import type {
+  ObservationCommentItem,
+  ObservationCommentReplyItem,
+  ObservationCommentThreadItem,
+} from '../../types/comment'
 import { validateCommentContent } from '../../utils/content-filter'
 import { formatRelativeTime } from '../../utils/time'
 import { addObservationComment, findCommentById, getCommentsByObsId } from './comment-store'
@@ -25,6 +29,58 @@ function toCommentItem(comment: ReturnType<typeof getCommentsByObsId>[number]): 
     is_expert: Boolean(user && user.role === 'reviewer'),
     reply_to_nickname: replyTarget ? replyTarget.nickname : undefined,
   }
+}
+
+/** 解析评论所属的一级评论 ID */
+export function getRootCommentId(commentId: string): string {
+  let id = commentId.trim()
+  while (true) {
+    const comment = findCommentById(id)
+    if (!comment) return id
+    if (comment.parent_comment_id) return comment.parent_comment_id
+    if (!comment.reply_to_comment_id) return comment.comment_id
+    id = comment.reply_to_comment_id
+  }
+}
+
+function resolveParentCommentId(comment: ReturnType<typeof getCommentsByObsId>[number]): string | undefined {
+  if (comment.parent_comment_id) return comment.parent_comment_id
+  if (!comment.reply_to_comment_id) return undefined
+  return getRootCommentId(comment.comment_id)
+}
+
+export function listObservationCommentThreads(obsId: string): ObservationCommentThreadItem[] {
+  const all = getCommentsByObsId(obsId)
+  const threadMap = new Map<string, ObservationCommentThreadItem>()
+  const threadOrder: string[] = []
+
+  all.forEach((comment) => {
+    const parentId = resolveParentCommentId(comment)
+    if (!parentId) {
+      threadMap.set(comment.comment_id, { ...toCommentItem(comment), replies: [] })
+      threadOrder.push(comment.comment_id)
+    }
+  })
+
+  all.forEach((comment) => {
+    const parentId = resolveParentCommentId(comment)
+    if (!parentId) return
+
+    let thread = threadMap.get(parentId)
+    if (!thread) {
+      const root = findCommentById(parentId)
+      if (!root || root.status !== 'active') return
+      thread = { ...toCommentItem(root), replies: [] }
+      threadMap.set(parentId, thread)
+      threadOrder.push(parentId)
+    }
+
+    thread.replies.push(toCommentItem(comment) as ObservationCommentReplyItem)
+  })
+
+  return threadOrder
+    .map((id) => threadMap.get(id))
+    .filter((item): item is ObservationCommentThreadItem => Boolean(item))
 }
 
 export function listObservationComments(obsId: string): ObservationCommentItem[] {
@@ -63,13 +119,24 @@ export function createObservationComment(
   const obs = getAllObservations().find((item) => item.obs_id === obsId)
   if (!obs) return { error: '记录不存在' }
 
-  let replyTo: { comment_id: string; user_id: string } | undefined
+  let replyTo:
+    | { comment_id: string; user_id: string; parent_comment_id?: string }
+    | undefined
   if (replyToCommentId) {
     const target = findCommentById(replyToCommentId.trim())
     if (!target || target.obs_id !== obsId || target.status !== 'active') {
       return { error: '回复的评论不存在' }
     }
-    replyTo = { comment_id: target.comment_id, user_id: target.user_id }
+
+    const parentCommentId = target.parent_comment_id || target.reply_to_comment_id
+      ? getRootCommentId(target.comment_id)
+      : target.comment_id
+
+    replyTo = {
+      comment_id: target.comment_id,
+      user_id: target.user_id,
+      parent_comment_id: parentCommentId,
+    }
   }
 
   const saved = addObservationComment(obsId, userId, content.trim(), replyTo)

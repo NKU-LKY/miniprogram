@@ -22,7 +22,7 @@ export function addObservationComment(
   obsId: string,
   userId: string,
   content: string,
-  replyTo?: { comment_id: string; user_id: string },
+  replyTo?: { comment_id: string; user_id: string; parent_comment_id?: string },
 ): ObservationComment {
   const comment: ObservationComment = {
     comment_id: generateCommentId(),
@@ -33,6 +33,7 @@ export function addObservationComment(
     status: 'active',
     reply_to_comment_id: replyTo ? replyTo.comment_id : undefined,
     reply_to_user_id: replyTo ? replyTo.user_id : undefined,
+    parent_comment_id: replyTo ? replyTo.parent_comment_id : undefined,
   }
 
   const all = getAllComments()

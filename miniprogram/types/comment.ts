@@ -10,9 +10,11 @@ export interface ObservationComment {
   reply_to_comment_id?: string
   /** 被回复的用户 ID */
   reply_to_user_id?: string
+  /** 所属的一级评论 ID（仅二级回复有值） */
+  parent_comment_id?: string
 }
 
-/** 详情页评论展示项 */
+/** 详情页评论展示项（扁平，兼容旧逻辑） */
 export interface ObservationCommentItem {
   comment_id: string
   content: string
@@ -21,4 +23,12 @@ export interface ObservationCommentItem {
   author_avatar_url: string
   is_expert: boolean
   reply_to_nickname?: string
+}
+
+/** 二级回复展示项 */
+export interface ObservationCommentReplyItem extends ObservationCommentItem {}
+
+/** 一级评论及其回复 */
+export interface ObservationCommentThreadItem extends ObservationCommentItem {
+  replies: ObservationCommentReplyItem[]
 }
