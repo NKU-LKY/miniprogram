@@ -1,0 +1,37 @@
+<view
+  class="guide-overlay"
+  wx:if="{{visible}}"
+  catchtouchmove="preventMove"
+  catchtap="preventTap"
+>
+  <view class="guide-mask guide-mask-top" style="height: {{masks.top}}px;"></view>
+  <view
+    class="guide-mask guide-mask-bottom"
+    style="top: {{masks.bottomTop}}px; height: {{masks.bottomHeight}}px;"
+  ></view>
+  <view
+    class="guide-mask guide-mask-left"
+    style="top: {{masks.leftTop}}px; width: {{masks.leftWidth}}px; height: {{masks.leftHeight}}px;"
+  ></view>
+  <view
+    class="guide-mask guide-mask-right"
+    style="top: {{masks.rightTop}}px; left: {{masks.rightLeft}}px; width: {{masks.rightWidth}}px; height: {{masks.rightHeight}}px;"
+  ></view>
+
+  <view
+    class="guide-highlight"
+    style="top: {{rect.top}}px; left: {{rect.left}}px; width: {{rect.width}}px; height: {{rect.height}}px; border-radius: {{radius}}px;"
+  >
+    <view class="guide-ring" style="border-radius: {{radius}}px;"></view>
+  </view>
+
+  <view class="guide-tooltip" style="top: {{tooltipTop}}px; left: {{tooltipLeft}}px;">
+    <text class="guide-step">{{currentStep}} / {{totalSteps}}</text>
+    <text class="guide-title">{{title}}</text>
+    <text class="guide-desc">{{desc}}</text>
+    <view class="guide-actions">
+      <view class="guide-skip" bindtap="onSkip">跳过</view>
+      <view class="guide-next" bindtap="onNext">{{isLast ? '开始使用' : '下一步'}}</view>
+    </view>
+  </view>
+</view>

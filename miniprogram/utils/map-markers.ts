@@ -1,4 +1,4 @@
-import type { MapObservationItem } from '../types/observation'
+import type { MapLocationGroup } from '../types/observation'
 
 /** 根据物种名称推断地图标记图标 */
 export function getSpeciesMarkerLabel(speciesName?: string): string {
@@ -14,20 +14,27 @@ export function getSpeciesMarkerLabel(speciesName?: string): string {
   return '📍'
 }
 
-export function buildMapMarkers(items: MapObservationItem[]): WechatMiniprogram.MapMarker[] {
-  return items.map((item, index) => {
-    const title = item.species_name || '待鉴定'
-    const calloutContent = item.species_name
-      ? `${item.location_name} · ${item.species_name}`
-      : `${item.location_name} · 待鉴定`
+function buildSpeciesCalloutSuffix(group: MapLocationGroup): string {
+  if (group.species_list.length === 0) return '待鉴定'
+  if (group.species_list.length === 1) return group.species_list[0].name
+  const top = group.species_list.slice(0, 2).map((item) => item.name)
+  const rest = group.species_list.length - top.length
+  return rest > 0 ? `${top.join('、')}等` : top.join('、')
+}
+
+export function buildMapMarkers(groups: MapLocationGroup[]): WechatMiniprogram.MapMarker[] {
+  return groups.map((group, index) => {
+    const speciesHint = buildSpeciesCalloutSuffix(group)
+    const countHint = group.record_count > 1 ? `${group.record_count} 条记录` : '1 条记录'
+    const calloutContent = `${group.location_name} · ${countHint} · ${speciesHint}`
 
     return {
       id: index + 1,
-      latitude: item.latitude,
-      longitude: item.longitude,
-      title,
+      latitude: group.latitude,
+      longitude: group.longitude,
+      title: group.location_name,
       label: {
-        content: item.marker_label,
+        content: group.record_count > 1 ? `${group.marker_label}${group.record_count}` : group.marker_label,
         color: '#2d5a2e',
         fontSize: 14,
         anchorX: 0,

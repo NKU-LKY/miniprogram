@@ -1,5 +1,3 @@
-import { SEED_OBSERVATIONS } from '../../data/observations.seed'
-import { resolveObservationCoordinate } from '../../data/locations'
 import type {
   CreateObservationParams,
   FeedListResult,
@@ -10,8 +8,9 @@ import type {
   ObservationStatus,
 } from '../../types/observation'
 import type { FilterOption, ObservationFilterParams } from '../../utils/observation-filter'
-import { applyObservationFilter, collectSpeciesOptions } from '../../utils/observation-filter'
+import { applyObservationFilter, collectLocationOptions, collectSpeciesOptions } from '../../utils/observation-filter'
 import { getSpeciesMarkerLabel } from '../../utils/map-markers'
+import { normalizeMapLocation } from '../../utils/map-locations'
 import { formatFullTime, formatRelativeTime } from '../../utils/time'
 import { isObservationLiked, listObservationCommentThreads } from './interaction-api'
 import { isObservationFeatured, setObservationFeatured } from './featured-store'
@@ -19,6 +18,7 @@ import {
   addObservation,
   buildSeedObservations,
   getAllObservations,
+  updateObservation,
   withdrawObservationByOwner,
 } from './observation-store'
 import { findUserById } from './user-store'
@@ -64,12 +64,13 @@ function toFeedItem(obs: Observation): ObservationFeedItem {
 }
 
 function getFeedObservations(): Observation[] {
+  const seed = buildSeedObservations()
   let list = getAllObservations()
-  if (list.length === 0 && SEED_OBSERVATIONS.length > 0) {
-    list = buildSeedObservations()
+  if (list.length === 0 && seed.length > 0) {
+    list = seed
   }
 
-  return list
+  const visible = list
     .filter(
       (obs) =>
         obs.status !== 'rejected' &&
@@ -77,6 +78,19 @@ function getFeedObservations(): Observation[] {
         obs.status !== 'withdrawn',
     )
     .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+
+  if (visible.length === 0 && seed.length > 0) {
+    return seed
+      .filter(
+        (obs) =>
+          obs.status !== 'rejected' &&
+          obs.status !== 'pending_review' &&
+          obs.status !== 'withdrawn',
+      )
+      .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+  }
+
+  return visible
 }
 
 function applyListFilter(
@@ -131,6 +145,7 @@ export function getObservationDetail(
     ...feedItem,
     time_full: formatFullTime(obs.submitted_at),
     liked: isObservationLiked(trimmedId, viewerUserId),
+    comments_enabled: obs.comments_enabled !== false,
     comments: listObservationCommentThreads(trimmedId),
   }
 }
@@ -159,6 +174,10 @@ export function getFeedSpeciesOptions(): FilterOption[] {
   return collectSpeciesOptions(getFeedObservations())
 }
 
+export function getFeedLocationOptions(): FilterOption[] {
+  return collectLocationOptions(getFeedObservations())
+}
+
 export function getMySpeciesOptions(userId: string): FilterOption[] {
   const all = getAllObservations()
     .filter((obs) => obs.user_id === userId && obs.status !== 'withdrawn')
@@ -166,20 +185,28 @@ export function getMySpeciesOptions(userId: string): FilterOption[] {
   return collectSpeciesOptions(all)
 }
 
+export function getMyLocationOptions(userId: string): FilterOption[] {
+  const all = getAllObservations()
+    .filter((obs) => obs.user_id === userId && obs.status !== 'withdrawn')
+    .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+  return collectLocationOptions(all)
+}
+
 export function listMapObservations(filter?: ObservationFilterParams): MapObservationItem[] {
   return applyListFilter(getFeedObservations(), filter)
     .map((obs) => {
-      const point = resolveObservationCoordinate(obs)
-      if (!point) return null
+      const normalized = normalizeMapLocation(obs)
+      if (!normalized) return null
 
       return {
         obs_id: obs.obs_id,
         photo_url: obs.photo_url,
         note: obs.note,
-        location_name: obs.location_name,
+        location_name: normalized.location_name,
         species_name: obs.species_name,
-        latitude: point.latitude,
-        longitude: point.longitude,
+        latitude: normalized.latitude,
+        longitude: normalized.longitude,
+        location_key: normalized.location_key,
         marker_label: getSpeciesMarkerLabel(obs.species_name),
         submitted_at: obs.submitted_at,
         time_text: formatRelativeTime(obs.submitted_at),
@@ -208,6 +235,38 @@ export function createObservation(params: CreateObservationParams): ObservationF
 export interface WithdrawObservationResult {
   success: boolean
   message?: string
+}
+
+export interface SetCommentsEnabledResult {
+  success: boolean
+  message?: string
+  comments_enabled?: boolean
+}
+
+export function setObservationCommentsEnabled(
+  obsId: string,
+  userId: string,
+  enabled: boolean,
+): SetCommentsEnabledResult {
+  const trimmedId = obsId.trim()
+  const trimmedUserId = userId.trim()
+  if (!trimmedId || !trimmedUserId) {
+    return { success: false, message: '参数无效' }
+  }
+
+  const obs = getAllObservations().find((item) => item.obs_id === trimmedId)
+  if (!obs) return { success: false, message: '记录不存在' }
+  if (obs.user_id !== trimmedUserId) {
+    return { success: false, message: '只能管理自己发布的记录' }
+  }
+  if (obs.status === 'withdrawn') {
+    return { success: false, message: '该记录已撤回' }
+  }
+
+  const updated = updateObservation(trimmedId, { comments_enabled: enabled })
+  if (!updated) return { success: false, message: '操作失败' }
+
+  return { success: true, comments_enabled: updated.comments_enabled !== false }
 }
 
 export function withdrawObservation(obsId: string, userId: string): WithdrawObservationResult {

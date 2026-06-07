@@ -2,6 +2,7 @@
   "disableScroll": true,
   "usingComponents": {
     "navigation-bar": "/components/navigation-bar/navigation-bar",
-    "obs-filter-bar": "/components/obs-filter-bar/obs-filter-bar"
+    "obs-filter-bar": "/components/obs-filter-bar/obs-filter-bar",
+    "guide-overlay": "/components/guide-overlay/guide-overlay"
   }
 }

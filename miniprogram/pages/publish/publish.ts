@@ -7,6 +7,7 @@ import {
   type PublishDraft,
 } from '../../utils/publish-draft'
 import { resolveNearbyLandmark } from '../../utils/tencent-map'
+import { canPublishObservation } from '../../utils/permissions'
 import { getCurrentUser } from '../../utils/session'
 
 const REFRESH_FEED_KEY = 'campus_bio_refresh_feed'
@@ -47,7 +48,7 @@ Page({
       wx.redirectTo({ url: '/pages/login/login' })
       return
     }
-    if (user.role !== 'observer') {
+    if (!canPublishObservation(user)) {
       wx.showToast({ title: '仅观测者可发布记录', icon: 'none' })
       setTimeout(() => wx.navigateBack(), 800)
       return

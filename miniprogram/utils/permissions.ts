@@ -21,6 +21,11 @@ export function canIdentifySpecies(user?: SafeUser | null): boolean {
   return isReviewer(user)
 }
 
+/** 是否可发布观测记录（仅未封禁的观测者） */
+export function canPublishObservation(user?: SafeUser | null): boolean {
+  return Boolean(user && user.status === 'active' && user.role === 'observer')
+}
+
 export function requireAdmin(): SafeUser | null {
   const user = getCurrentUser()
   if (!user || !isAdmin(user)) return null

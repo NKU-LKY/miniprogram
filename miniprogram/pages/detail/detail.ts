@@ -1,4 +1,8 @@
-import { getObservationDetail, withdrawObservation } from '../../services/local/observation-api'
+import {
+  getObservationDetail,
+  setObservationCommentsEnabled,
+  withdrawObservation,
+} from '../../services/local/observation-api'
 import { getOwnerAppealForObs, submitObservationAppeal } from '../../services/local/appeal-api'
 import {
   claimIdentification,
@@ -11,6 +15,7 @@ import {
   listObservationCommentThreads,
   toggleObservationLike,
 } from '../../services/local/interaction-api'
+import { validateCommentContent } from '../../utils/content-filter'
 import {
   hideCommentForAdmin,
   hideObservationForAdmin,
@@ -155,6 +160,7 @@ Page({
     liking: false,
     isAdmin: false,
     isOwner: false,
+    commentsEnabled: true,
     isReviewer: false,
     isHidden: false,
     isFeatured: false,
@@ -221,6 +227,7 @@ Page({
         comments: result.comments.map(toCommentThreadView),
         isAdmin: Boolean(user && user.role === 'admin'),
         isOwner,
+        commentsEnabled: result.comments_enabled,
         isReviewer,
         isHidden: result.status === 'rejected' || result.status === 'pending_review',
         isFeatured: result.is_featured,
@@ -303,13 +310,18 @@ Page({
 
   onSubmitComment() {
     if (this.data.submitting || !this.data.detail) return
+    if (!this.data.commentsEnabled) {
+      wx.showToast({ title: '该记录的评论区已关闭，暂不支持评论', icon: 'none' })
+      return
+    }
 
     const user = getCurrentUser()
     if (!user) return
 
     const content = this.data.commentInput.trim()
-    if (!content) {
-      wx.showToast({ title: '请输入评论内容', icon: 'none' })
+    const validationError = validateCommentContent(content)
+    if (validationError) {
+      wx.showToast({ title: validationError, icon: 'none' })
       return
     }
 
@@ -337,6 +349,45 @@ Page({
     } finally {
       this.setData({ submitting: false })
     }
+  },
+
+  onToggleComments() {
+    const user = getCurrentUser()
+    const obsId = (this.data.obsId || '').trim()
+    if (!user || !obsId || !this.data.isOwner) return
+
+    const enabling = !this.data.commentsEnabled
+    const title = enabling ? '开启评论区' : '关闭评论区'
+    const content = enabling
+      ? '开启后，其他用户可以在该记录下发表评论。'
+      : '关闭后，其他用户将无法发表新评论，已有评论仍可查看。'
+
+    wx.showModal({
+      title,
+      content,
+      confirmColor: '#2d5a2e',
+      success: (res) => {
+        if (!res.confirm) return
+
+        try {
+          const result = setObservationCommentsEnabled(obsId, user.user_id, enabling)
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
+
+          this.setData({
+            commentsEnabled: result.comments_enabled !== false,
+            replyTarget: null,
+            commentPlaceholder: '说点什么……',
+          })
+          wx.showToast({ title: enabling ? '评论区已开启' : '评论区已关闭', icon: 'success' })
+        } catch (err) {
+          console.error('onToggleComments error:', err)
+          wx.showToast({ title: '操作失败，请重试', icon: 'none' })
+        }
+      },
+    })
   },
 
   onWithdrawObservation() {

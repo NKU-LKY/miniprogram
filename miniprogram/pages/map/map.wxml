@@ -11,9 +11,12 @@
 
   <obs-filter-bar
     species-options="{{speciesOptions}}"
+    location-options="{{locationOptions}}"
     time-options="{{timeOptions}}"
     species-index="{{speciesIndex}}"
+    location-index="{{locationIndex}}"
     time-index="{{timeIndex}}"
+    featured-only="{{featuredOnly}}"
     show-reset="{{filterActive}}"
     bind:change="onFilterChange"
     bind:reset="onResetFilter"
@@ -41,10 +44,10 @@
       <text class="locate-icon">◎</text>
     </view>
 
-    <view class="map-hint">
+    <view class="map-hint" wx:if="{{!showLocationSheet}}">
       <text wx:if="{{locating}}">正在定位到当前位置…</text>
-      <text wx:elif="{{useCampusFallback}}">未获取到定位，当前显示校园演示区域；点击标记查看详情</text>
-      <text wx:elif="{{mapItems.length > 0}}">共 {{mapItems.length}} 条记录，点击标记进入详情</text>
+      <text wx:elif="{{useCampusFallback}}">未获取到定位，当前显示校园演示区域；点击标记查看该地点记录</text>
+      <text wx:elif="{{mapItems.length > 0}}">共 {{mapItems.length}} 条记录 · {{locationCount}} 个地点，点击标记查看详情</text>
       <text wx:elif="{{filterActive}}">没有符合筛选条件的观测点</text>
       <text wx:else>蓝点为你的位置，发布观测后标记会出现在地图上</text>
     </view>
@@ -85,4 +88,58 @@
       <text class="empty-desc">发布第一条观测记录后，它们会出现在地图上</text>
     </view>
   </scroll-view>
+
+  <view
+    class="location-sheet-mask {{sheetVisible ? 'show' : ''}}"
+    wx:if="{{showLocationSheet}}"
+    bindtap="onCloseLocationSheet"
+    catchtouchmove="preventTouchMove"
+  ></view>
+
+  <view class="location-sheet {{sheetVisible ? 'show' : ''}}" wx:if="{{showLocationSheet && activeLocation}}">
+    <view class="sheet-handle-wrap">
+      <view class="sheet-handle"></view>
+    </view>
+
+    <view class="sheet-header">
+      <view class="sheet-title-row">
+        <text class="sheet-location">📍 {{activeLocation.location_name}}</text>
+        <view class="sheet-close" bindtap="onCloseLocationSheet">×</view>
+      </view>
+      <text class="sheet-summary">共 {{activeLocation.record_count}} 条观测记录 · {{activeLocation.species_list.length}} 种物种</text>
+    </view>
+
+    <scroll-view class="sheet-species-scroll" scroll-x enable-flex wx:if="{{activeLocation.species_list.length > 0}}">
+      <view class="sheet-species-list">
+        <view class="species-chip" wx:for="{{activeLocation.species_list}}" wx:key="name">
+          <text class="species-chip-icon">{{item.marker_label}}</text>
+          <text class="species-chip-name">{{item.name}}</text>
+          <text class="species-chip-count">{{item.count}}</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="sheet-section-title">该地点的记录</view>
+
+    <scroll-view class="sheet-records" scroll-y type="list">
+      <view
+        class="sheet-record-item"
+        wx:for="{{activeLocation.records}}"
+        wx:key="obs_id"
+        data-id="{{item.obs_id}}"
+        bindtap="onSheetRecordTap"
+      >
+        <image class="sheet-record-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
+        <view class="sheet-record-body">
+          <view class="sheet-record-top">
+            <text class="sheet-record-label">{{item.marker_label}}</text>
+            <text class="sheet-record-species">{{item.species_name || '待鉴定'}}</text>
+          </view>
+          <text class="sheet-record-note">{{item.note || '暂无描述'}}</text>
+          <text class="sheet-record-time">{{item.time_text}}</text>
+        </view>
+        <text class="sheet-record-arrow">›</text>
+      </view>
+    </scroll-view>
+  </view>
 </view>

@@ -133,3 +133,10 @@ export const SEED_OBSERVATIONS: Omit<Observation, 'obs_id'>[] = [
     comment_count: 9,
   },
 ]
+
+/** 种子数据中出现过的物种名，用于筛选「其他」物种 */
+export const SEED_SPECIES_NAMES = Array.from(
+  new Set(
+    SEED_OBSERVATIONS.map((item) => (item.species_name || '').trim()).filter((name) => name.length > 0),
+  ),
+)

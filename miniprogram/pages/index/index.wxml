@@ -4,7 +4,7 @@
   <view class="page-header">
     <view class="user-panel">
       <view class="user-info-row">
-        <view class="avatar-wrap" bindtap="onAvatarTap">
+        <view class="avatar-wrap guide-target-avatar" bindtap="onAvatarTap">
           <image class="user-avatar" src="{{avatarUrl}}" mode="aspectFill"></image>
           <view class="avatar-dot" wx:if="{{hasUnreadNotifications}}"></view>
         </view>
@@ -27,7 +27,7 @@
         </view>
       </view>
 
-      <view class="map-entry" bindtap="onGoMap">
+      <view class="map-entry guide-target-map" bindtap="onGoMap">
         <text class="map-entry-icon">🗺</text>
         <text class="map-entry-text">校园地图</text>
         <text class="map-entry-desc">查看观测分布</text>
@@ -46,7 +46,7 @@
 
       <view class="tab-bar">
         <view
-          class="tab-item {{activeTab === 'feed' ? 'active' : ''}}"
+          class="tab-item guide-target-feed {{activeTab === 'feed' ? 'active' : ''}}"
           data-tab="feed"
           bindtap="onTabChange"
         >最新分享</view>
@@ -67,14 +67,30 @@
   <obs-filter-bar
     wx:if="{{activeTab !== 'species'}}"
     species-options="{{speciesOptions}}"
+    location-options="{{locationOptions}}"
     time-options="{{timeOptions}}"
     species-index="{{speciesIndex}}"
+    location-index="{{locationIndex}}"
     time-index="{{timeIndex}}"
     featured-only="{{featuredOnly}}"
     show-reset="{{filterActive}}"
     bind:change="onFilterChange"
     bind:reset="onResetFilter"
   />
+
+  <view class="search-row" wx:if="{{activeTab !== 'species' && showSearch}}">
+    <input
+      class="search-input"
+      placeholder="搜索描述、物种、地点..."
+      value="{{searchInput}}"
+      focus="{{searchFocus}}"
+      confirm-type="search"
+      bindinput="onSearchInput"
+      bindconfirm="onSearchConfirm"
+    />
+    <view class="search-clear" wx:if="{{searchInput}}" bindtap="onSearchClear">×</view>
+    <view class="search-btn" bindtap="onSearchConfirm">搜索</view>
+  </view>
 
   <scroll-view
     class="scrollarea"
@@ -123,8 +139,8 @@
 
       <view class="empty" wx:if="{{!loading && feedList.length === 0 && filterActive}}">
         <text class="empty-icon">🔍</text>
-        <text class="empty-title">没有符合筛选条件的记录</text>
-        <text class="empty-desc">试试调整物种或时间范围</text>
+        <text class="empty-title">{{searchKeyword ? '没有符合搜索条件的记录' : '没有符合筛选条件的记录'}}</text>
+        <text class="empty-desc">{{searchKeyword ? '试试换个关键词或调整筛选条件' : '试试调整物种或时间范围'}}</text>
         <button class="empty-btn" bindtap="onResetFilter">清除筛选</button>
       </view>
 
@@ -171,16 +187,22 @@
 
       <view class="empty" wx:if="{{!myLoading && myList.length === 0 && filterActive}}">
         <text class="empty-icon">🔍</text>
-        <text class="empty-title">没有符合筛选条件的记录</text>
-        <text class="empty-desc">试试调整物种或时间范围</text>
+        <text class="empty-title">{{searchKeyword ? '没有符合搜索条件的记录' : '没有符合筛选条件的记录'}}</text>
+        <text class="empty-desc">{{searchKeyword ? '试试换个关键词或调整筛选条件' : '试试调整物种或时间范围'}}</text>
         <button class="empty-btn" bindtap="onResetFilter">清除筛选</button>
       </view>
 
       <view class="empty" wx:elif="{{!myLoading && myList.length === 0}}">
         <text class="empty-icon">📷</text>
-        <text class="empty-title">你还没有上传过观测记录</text>
-        <text class="empty-desc">发布第一条发现，解锁你的校园图鉴</text>
-        <button wx:if="{{isObserver}}" class="empty-btn" bindtap="onGoPublish">上传观测记录</button>
+        <block wx:if="{{isObserver}}">
+          <text class="empty-title">你还没有上传过观测记录</text>
+          <text class="empty-desc">发布第一条发现，解锁你的校园图鉴</text>
+          <button class="empty-btn" bindtap="onGoPublish">上传观测记录</button>
+        </block>
+        <block wx:else>
+          <text class="empty-title">暂无上传记录</text>
+          <text class="empty-desc">仅观测者可发布记录</text>
+        </block>
       </view>
     </block>
 
@@ -240,8 +262,33 @@
   </scroll-view>
 </view>
 
-<view class="fab-publish" wx:if="{{isObserver}}" bindtap="onGoPublish">
-  <text class="fab-icon">+</text>
+<view class="fab-mask" wx:if="{{fabExpanded}}" bindtap="onCloseFab" catchtouchmove="preventTouchMove"></view>
+
+<view class="fab-dock guide-target-fab" wx:if="{{activeTab !== 'species'}}">
+  <view class="fab-sub-items {{fabExpanded ? 'expanded' : ''}}">
+    <view class="fab-sub-btn search" catchtap="onFabSearch">
+      <text class="fab-sub-icon">🔍</text>
+    </view>
+    <view class="fab-sub-btn publish" wx:if="{{isObserver}}" catchtap="onFabPublish">
+      <text class="fab-sub-icon">+</text>
+    </view>
+  </view>
+  <view class="fab-main {{fabExpanded ? 'active' : ''}}" catchtap="onFabToggle">
+    <text class="fab-main-icon">{{fabExpanded ? '×' : '+'}}</text>
+  </view>
 </view>
 
 <view class="menu-mask" wx:if="{{showUserMenu}}" bindtap="onCloseMenu"></view>
+
+<guide-overlay
+  visible="{{guideVisible}}"
+  rect="{{guideRect}}"
+  title="{{guideTitle}}"
+  desc="{{guideDesc}}"
+  current-step="{{guideStep + 1}}"
+  total-steps="{{guideTotalSteps}}"
+  is-last="{{guideStep + 1 >= guideTotalSteps}}"
+  radius="{{guideRadius}}"
+  bind:next="onGuideNext"
+  bind:skip="onGuideSkip"
+/>

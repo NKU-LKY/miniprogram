@@ -118,6 +118,9 @@ export function createObservationComment(
 
   const obs = getAllObservations().find((item) => item.obs_id === obsId)
   if (!obs) return { error: '记录不存在' }
+  if (obs.comments_enabled === false) {
+    return { error: '该记录的评论区已关闭，暂不支持评论' }
+  }
 
   let replyTo:
     | { comment_id: string; user_id: string; parent_comment_id?: string }

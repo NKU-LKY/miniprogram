@@ -1,17 +1,33 @@
 import { SEED_OBSERVATIONS } from '../../data/observations.seed'
+import { getLocationByName } from '../../data/locations'
 import type { Observation } from '../../types/observation'
 import { getLocalItem, setLocalItem } from './storage'
 
 const OBSERVATIONS_KEY = 'observations'
 const SEED_VERSION_KEY = 'observations_seed_version'
-const CURRENT_SEED_VERSION = 2
+const CURRENT_SEED_VERSION = 3
 
 function normalizeObservation(obs: Observation): Observation {
-  return { ...obs }
+  return {
+    ...obs,
+    comments_enabled: obs.comments_enabled !== false,
+  }
+}
+
+function repairObservationLocation(obs: Observation): Observation {
+  const preset = getLocationByName((obs.location_name || '').trim())
+  if (!preset) return obs
+
+  return normalizeObservation({
+    ...obs,
+    location_name: preset.name,
+    latitude: preset.latitude,
+    longitude: preset.longitude,
+  })
 }
 
 function cloneObservations(list: Observation[]): Observation[] {
-  return list.map(normalizeObservation)
+  return list.map((obs) => repairObservationLocation(normalizeObservation(obs)))
 }
 
 function saveObservations(list: Observation[]): Observation[] {
@@ -47,6 +63,7 @@ function mergeSeedIntoStored(
         like_count: obs.like_count,
         comment_count: obs.comment_count,
         is_featured: obs.is_featured,
+        comments_enabled: obs.comments_enabled,
       })
     })
   }
@@ -97,6 +114,7 @@ export function addObservation(
     like_count: 0,
     comment_count: 0,
     is_featured: false,
+    comments_enabled: true,
     submitted_at: new Date().toISOString(),
   })
 
@@ -118,6 +136,7 @@ export function updateObservation(
       | 'claimed_at'
       | 'identified_at'
       | 'review_note'
+      | 'comments_enabled'
     >
   >,
 ): Observation | null {

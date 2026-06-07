@@ -210,3 +210,221 @@ page {
   background: #eef5e8;
   border-radius: 32rpx;
 }
+
+.location-sheet-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(20, 36, 22, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+  z-index: 20;
+}
+
+.location-sheet-mask.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.location-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 72vh;
+  background: #fff;
+  border-radius: 28rpx 28rpx 0 0;
+  box-shadow: 0 -8rpx 32rpx rgba(45, 90, 46, 0.12);
+  transform: translateY(100%);
+  transition: transform 0.28s ease;
+  z-index: 21;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.location-sheet.show {
+  transform: translateY(0);
+}
+
+.sheet-handle-wrap {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 16rpx 0 8rpx;
+}
+
+.sheet-handle {
+  width: 64rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: #d8e8d8;
+}
+
+.sheet-header {
+  flex-shrink: 0;
+  padding: 0 28rpx 20rpx;
+}
+
+.sheet-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-bottom: 8rpx;
+}
+
+.sheet-location {
+  flex: 1;
+  min-width: 0;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #2d5a2e;
+}
+
+.sheet-close {
+  width: 48rpx;
+  height: 48rpx;
+  line-height: 44rpx;
+  text-align: center;
+  font-size: 40rpx;
+  color: #9ab09b;
+  flex-shrink: 0;
+}
+
+.sheet-summary {
+  display: block;
+  font-size: 24rpx;
+  color: #7a9a7b;
+}
+
+.sheet-species-scroll {
+  flex-shrink: 0;
+  width: 100%;
+  white-space: nowrap;
+  margin-bottom: 8rpx;
+}
+
+.sheet-species-list {
+  display: flex;
+  gap: 12rpx;
+  padding: 0 28rpx 16rpx;
+}
+
+.species-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 10rpx 18rpx;
+  background: #f5f9f0;
+  border: 1rpx solid #e0ece0;
+  border-radius: 999rpx;
+  flex-shrink: 0;
+}
+
+.species-chip-icon {
+  font-size: 24rpx;
+}
+
+.species-chip-name {
+  font-size: 24rpx;
+  color: #2d5a2e;
+}
+
+.species-chip-count {
+  min-width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  padding: 0 8rpx;
+  text-align: center;
+  font-size: 20rpx;
+  color: #4c8c4a;
+  background: #eef5e8;
+  border-radius: 16rpx;
+}
+
+.sheet-section-title {
+  flex-shrink: 0;
+  padding: 8rpx 28rpx 12rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #4a6b4b;
+}
+
+.sheet-records {
+  flex: 1;
+  min-height: 0;
+  max-height: 42vh;
+  width: 100%;
+}
+
+.sheet-record-item {
+  display: flex;
+  align-items: center;
+  margin: 0 20rpx 12rpx;
+  padding: 16rpx;
+  background: #f8fbf6;
+  border-radius: 12rpx;
+}
+
+.sheet-record-item:active {
+  opacity: 0.85;
+}
+
+.sheet-record-thumb {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+  margin-right: 16rpx;
+  background: #eef5e8;
+}
+
+.sheet-record-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sheet-record-top {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6rpx;
+}
+
+.sheet-record-label {
+  font-size: 26rpx;
+  margin-right: 8rpx;
+}
+
+.sheet-record-species {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #2d5a2e;
+}
+
+.sheet-record-note {
+  display: block;
+  font-size: 24rpx;
+  color: #555;
+  line-height: 1.45;
+  margin-bottom: 6rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-record-time {
+  font-size: 20rpx;
+  color: #9ab09b;
+}
+
+.sheet-record-arrow {
+  flex-shrink: 0;
+  margin-left: 8rpx;
+  font-size: 36rpx;
+  color: #c5d4c5;
+  line-height: 1;
+}

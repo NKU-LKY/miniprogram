@@ -1,36 +1,72 @@
-<view class="filter-bar">
-  <picker
-    mode="selector"
-    range="{{speciesOptions}}"
-    range-key="label"
-    value="{{speciesIndex}}"
-    bindchange="onSpeciesChange"
-  >
-    <view class="filter-chip {{speciesIndex > 0 ? 'active' : ''}}">
-      <text class="filter-label">{{speciesOptions[speciesIndex].label}}</text>
-      <text class="filter-arrow">▾</text>
-    </view>
-  </picker>
+<view class="filter-wrap">
+  <view class="filter-bar">
+    <picker
+      mode="selector"
+      range="{{speciesOptions}}"
+      range-key="label"
+      value="{{speciesIndex}}"
+      bindchange="onSpeciesChange"
+    >
+      <view class="filter-chip {{speciesIndex > 0 ? 'active' : ''}}">
+        <text class="filter-label">{{speciesOptions[speciesIndex].label}}</text>
+        <text class="filter-arrow">▾</text>
+      </view>
+    </picker>
 
-  <picker
-    mode="selector"
-    range="{{timeOptions}}"
-    range-key="label"
-    value="{{timeIndex}}"
-    bindchange="onTimeChange"
-  >
-    <view class="filter-chip {{timeIndex > 0 ? 'active' : ''}}">
-      <text class="filter-label">{{timeOptions[timeIndex].label}}</text>
-      <text class="filter-arrow">▾</text>
-    </view>
-  </picker>
+    <picker
+      mode="selector"
+      range="{{locationOptions}}"
+      range-key="label"
+      value="{{locationIndex}}"
+      bindchange="onLocationChange"
+    >
+      <view class="filter-chip {{locationIndex > 0 ? 'active' : ''}}">
+        <text class="filter-label">{{locationOptions[locationIndex].label}}</text>
+        <text class="filter-arrow">▾</text>
+      </view>
+    </picker>
 
-  <view
-    class="filter-chip featured {{featuredOnly ? 'active' : ''}}"
-    bindtap="onFeaturedToggle"
-  >
-    <text class="filter-label">⭐ 精选</text>
+    <picker
+      mode="selector"
+      range="{{timeOptions}}"
+      range-key="label"
+      value="{{timeIndex}}"
+      bindchange="onTimeChange"
+    >
+      <view class="filter-chip {{timeIndex > 0 ? 'active' : ''}}">
+        <text class="filter-label">{{timeOptions[timeIndex].label}}</text>
+        <text class="filter-arrow">▾</text>
+      </view>
+    </picker>
+
+    <view
+      class="filter-chip featured {{featuredOnly ? 'active' : ''}}"
+      bindtap="onFeaturedToggle"
+    >
+      <text class="filter-label">⭐ 精选</text>
+    </view>
+
+    <view
+      wx:if="{{enableSearch}}"
+      class="filter-chip search {{showSearch || searchInput ? 'active' : ''}}"
+      bindtap="onSearchToggle"
+    >
+      <text class="filter-label">🔍 搜索</text>
+    </view>
+
+    <view class="filter-reset" wx:if="{{showReset}}" bindtap="onReset">重置</view>
   </view>
 
-  <view class="filter-reset" wx:if="{{showReset}}" bindtap="onReset">重置</view>
+  <view class="search-row" wx:if="{{enableSearch && showSearch}}">
+    <input
+      class="search-input"
+      placeholder="搜索描述、物种、地点..."
+      value="{{searchInput}}"
+      confirm-type="search"
+      bindinput="onSearchInput"
+      bindconfirm="onSearchConfirm"
+    />
+    <view class="search-clear" wx:if="{{searchInput}}" bindtap="onSearchClear">×</view>
+    <view class="search-btn" bindtap="onSearchConfirm">搜索</view>
+  </view>
 </view>

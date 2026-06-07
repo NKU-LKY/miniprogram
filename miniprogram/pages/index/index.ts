@@ -1,7 +1,7 @@
 import { countPendingIdentification } from '../../services/local/identification-api'
 import { getUnreadNotificationCount } from '../../services/local/notification-api'
 import { findUserById } from '../../services/local/user-store'
-import { getFeedSpeciesOptions, getMySpeciesOptions, listFeed, listMyFeed } from '../../services/local/observation-api'
+import { getFeedLocationOptions, getFeedSpeciesOptions, getMyLocationOptions, getMySpeciesOptions, listFeed, listMyFeed } from '../../services/local/observation-api'
 import { listSpeciesArchives } from '../../services/local/species-api'
 import type { ObservationFeedItem } from '../../types/observation'
 import type { SpeciesArchiveSummary } from '../../types/species'
@@ -14,6 +14,8 @@ import {
   type ObservationFilterParams,
   type TimeFilterOption,
 } from '../../utils/observation-filter'
+import { isOnboardingCompleted, markOnboardingCompleted } from '../../utils/onboarding'
+import { canPublishObservation } from '../../utils/permissions'
 import { clearSession, getCurrentUser, refreshSessionUser } from '../../utils/session'
 
 /** 每页 6 条，与一屏可见数量一致，上滑加载下一页 */
@@ -22,6 +24,59 @@ const PAGE_SIZE = 6
 const REFRESH_FEED_KEY = 'campus_bio_refresh_feed'
 
 type ActiveTab = 'feed' | 'mine' | 'species'
+
+interface GuideRect {
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
+interface GuideStepConfig {
+  selector: string
+  title: string
+  desc: string
+  radius: number
+  prepare?: (page: WechatMiniprogram.Page.TrivialInstance) => void
+}
+
+const GUIDE_STEPS: GuideStepConfig[] = [
+  {
+    selector: '.guide-target-avatar',
+    title: '个人中心',
+    desc: '点击头像框打开个人中心',
+    radius: 999,
+  },
+  {
+    selector: '.guide-target-map',
+    title: '校园地图',
+    desc: '在这里打开校园地图',
+    radius: 12,
+  },
+  {
+    selector: '.guide-target-feed',
+    title: '最新分享',
+    desc: '在这里查看大家分享的记录',
+    radius: 0,
+    prepare(page) {
+      if (page.data.activeTab !== 'feed') {
+        page.setData({ activeTab: 'feed' })
+      }
+    },
+  },
+  {
+    selector: '.guide-target-fab',
+    title: '上传与搜索',
+    desc: '点击这里上传你的发现/搜索记录',
+    radius: 999,
+    prepare(page) {
+      if (page.data.activeTab === 'species') {
+        page.setData({ activeTab: 'feed' })
+      }
+      page.setData({ fabExpanded: false, showSearch: false, showUserMenu: false })
+    },
+  },
+]
 
 interface FlatFeedItem {
   obs_id: string
@@ -83,14 +138,28 @@ Page({
     pendingIdentificationCount: 0,
     hasUnreadNotifications: false,
     speciesOptions: [{ label: '全部物种', value: '' }] as FilterOption[],
+    locationOptions: [{ label: '全部地点', value: '' }] as FilterOption[],
     timeOptions: TIME_RANGE_OPTIONS as TimeFilterOption[],
     speciesIndex: 0,
+    locationIndex: 0,
     timeIndex: 0,
     featuredOnly: false,
     filterActive: false,
+    showSearch: false,
+    searchFocus: false,
+    searchInput: '',
+    searchKeyword: '',
+    fabExpanded: false,
     speciesList: [] as SpeciesArchiveSummary[],
     speciesLoading: false,
     speciesLoaded: false,
+    guideVisible: false,
+    guideStep: 0,
+    guideTotalSteps: GUIDE_STEPS.length,
+    guideRect: { top: 0, left: 0, width: 0, height: 0 } as GuideRect,
+    guideTitle: '',
+    guideDesc: '',
+    guideRadius: 12,
   },
 
   onLoad() {
@@ -98,6 +167,10 @@ Page({
     this.syncUserInfo()
     this.refreshFilterOptions()
     this.loadFeed(true)
+  },
+
+  onReady() {
+    this.tryStartOnboarding()
   },
 
   onShow() {
@@ -108,6 +181,7 @@ Page({
     if (this.data.activeTab === 'species' && this.data.speciesLoaded) {
       this.loadSpeciesArchives()
     }
+    this.tryStartOnboarding()
   },
 
   ensureLoggedIn(): boolean {
@@ -133,7 +207,7 @@ Page({
       nickname: user.nickname || '未命名用户',
       avatarUrl: user.avatar_url || '',
       roleLabel: ROLE_LABELS[user.role] || '',
-      isObserver: user.role === 'observer',
+      isObserver: canPublishObservation(user),
       isReviewer,
       isAdmin: user.role === 'admin',
       pendingIdentificationCount: isReviewer ? countPendingIdentification() : 0,
@@ -182,41 +256,81 @@ Page({
 
   refreshFilterOptions() {
     const user = getCurrentUser()
+    const observationsSource =
+      this.data.activeTab === 'feed' ? 'feed' : 'mine'
     const speciesOptions =
-      this.data.activeTab === 'feed'
+      observationsSource === 'feed'
         ? getFeedSpeciesOptions()
         : getMySpeciesOptions((user && user.user_id) || '')
+    const locationOptions =
+      observationsSource === 'feed'
+        ? getFeedLocationOptions()
+        : getMyLocationOptions((user && user.user_id) || '')
 
     const speciesIndex = Math.min(this.data.speciesIndex, Math.max(speciesOptions.length - 1, 0))
+    const locationIndex = Math.min(this.data.locationIndex, Math.max(locationOptions.length - 1, 0))
 
     this.setData({
       speciesOptions,
+      locationOptions,
       speciesIndex,
-      filterActive: isFilterActive(speciesIndex, this.data.timeIndex, this.data.featuredOnly),
+      locationIndex,
+      filterActive: isFilterActive(
+        speciesIndex,
+        this.data.timeIndex,
+        this.data.featuredOnly,
+        locationIndex,
+        this.data.searchKeyword,
+      ),
     })
   },
 
   getCurrentFilter(): ObservationFilterParams {
-    const { speciesOptions, speciesIndex, timeOptions, timeIndex, featuredOnly } = this.data
-    return buildFilterParams(speciesOptions[speciesIndex], timeOptions[timeIndex], featuredOnly)
+    const {
+      speciesOptions,
+      speciesIndex,
+      locationOptions,
+      locationIndex,
+      timeOptions,
+      timeIndex,
+      featuredOnly,
+      searchKeyword,
+    } = this.data
+    return buildFilterParams(
+      speciesOptions[speciesIndex],
+      timeOptions[timeIndex],
+      featuredOnly,
+      locationOptions[locationIndex],
+      searchKeyword,
+    )
   },
 
   onFilterChange(e: WechatMiniprogram.CustomEvent) {
-    const { type, index } = e.detail as { type: 'species' | 'time' | 'featured'; index?: number }
+    const { type, index } = e.detail as { type: 'species' | 'location' | 'time' | 'featured'; index?: number }
     const speciesIndex = type === 'species' && index !== undefined ? index : this.data.speciesIndex
+    const locationIndex = type === 'location' && index !== undefined ? index : this.data.locationIndex
     const timeIndex = type === 'time' && index !== undefined ? index : this.data.timeIndex
     const featuredOnly = type === 'featured' ? !this.data.featuredOnly : this.data.featuredOnly
     const filter = buildFilterParams(
       this.data.speciesOptions[speciesIndex],
       this.data.timeOptions[timeIndex],
       featuredOnly,
+      this.data.locationOptions[locationIndex],
+      this.data.searchKeyword,
     )
 
     this.setData({
       speciesIndex,
+      locationIndex,
       timeIndex,
       featuredOnly,
-      filterActive: isFilterActive(speciesIndex, timeIndex, featuredOnly),
+      filterActive: isFilterActive(
+        speciesIndex,
+        timeIndex,
+        featuredOnly,
+        locationIndex,
+        this.data.searchKeyword,
+      ),
     })
 
     if (this.data.activeTab === 'feed') {
@@ -227,8 +341,103 @@ Page({
   },
 
   onResetFilter() {
-    const filter = buildFilterParams(this.data.speciesOptions[0], this.data.timeOptions[0], false)
-    this.setData({ speciesIndex: 0, timeIndex: 0, featuredOnly: false, filterActive: false })
+    const filter = buildFilterParams(
+      this.data.speciesOptions[0],
+      this.data.timeOptions[0],
+      false,
+      this.data.locationOptions[0],
+    )
+    this.setData({
+      speciesIndex: 0,
+      locationIndex: 0,
+      timeIndex: 0,
+      featuredOnly: false,
+      filterActive: false,
+      showSearch: false,
+      searchFocus: false,
+      searchInput: '',
+      searchKeyword: '',
+      fabExpanded: false,
+    })
+    if (this.data.activeTab === 'feed') {
+      this.loadFeed(true, filter)
+    } else {
+      this.loadMyFeed(true, filter)
+    }
+  },
+
+  preventTouchMove() {},
+
+  onFabToggle() {
+    this.setData({ fabExpanded: !this.data.fabExpanded })
+  },
+
+  onCloseFab() {
+    this.setData({ fabExpanded: false })
+  },
+
+  onFabPublish() {
+    this.setData({ fabExpanded: false })
+    wx.navigateTo({ url: '/pages/publish/publish' })
+  },
+
+  onFabSearch() {
+    this.setData({ fabExpanded: false, showSearch: true, searchFocus: true })
+    setTimeout(() => this.setData({ searchFocus: false }), 300)
+  },
+
+  onSearchInput(e: WechatMiniprogram.Input) {
+    this.setData({ searchInput: e.detail.value })
+  },
+
+  onSearchConfirm() {
+    const searchKeyword = this.data.searchInput.trim()
+    const filter = buildFilterParams(
+      this.data.speciesOptions[this.data.speciesIndex],
+      this.data.timeOptions[this.data.timeIndex],
+      this.data.featuredOnly,
+      this.data.locationOptions[this.data.locationIndex],
+      searchKeyword,
+    )
+
+    this.setData({
+      searchInput: searchKeyword,
+      searchKeyword,
+      filterActive: isFilterActive(
+        this.data.speciesIndex,
+        this.data.timeIndex,
+        this.data.featuredOnly,
+        this.data.locationIndex,
+        searchKeyword,
+      ),
+    })
+
+    if (this.data.activeTab === 'feed') {
+      this.loadFeed(true, filter)
+    } else {
+      this.loadMyFeed(true, filter)
+    }
+  },
+
+  onSearchClear() {
+    const filter = buildFilterParams(
+      this.data.speciesOptions[this.data.speciesIndex],
+      this.data.timeOptions[this.data.timeIndex],
+      this.data.featuredOnly,
+      this.data.locationOptions[this.data.locationIndex],
+    )
+
+    this.setData({
+      searchInput: '',
+      searchKeyword: '',
+      filterActive: isFilterActive(
+        this.data.speciesIndex,
+        this.data.timeIndex,
+        this.data.featuredOnly,
+        this.data.locationIndex,
+      ),
+    })
+
     if (this.data.activeTab === 'feed') {
       this.loadFeed(true, filter)
     } else {
@@ -281,9 +490,15 @@ Page({
       activeTab: tab,
       showUserMenu: false,
       speciesIndex: 0,
+      locationIndex: 0,
       timeIndex: 0,
       featuredOnly: false,
       filterActive: false,
+      showSearch: false,
+      searchFocus: false,
+      searchInput: '',
+      searchKeyword: '',
+      fabExpanded: false,
     })
 
     this.refreshFilterOptions()
@@ -445,5 +660,94 @@ Page({
         wx.reLaunch({ url: '/pages/login/login' })
       },
     })
+  },
+
+  tryStartOnboarding() {
+    const user = getCurrentUser()
+    if (!user || isOnboardingCompleted(user.user_id) || this.data.guideVisible) return
+    if ((this as WechatMiniprogram.Page.TrivialInstance & { _onboardingScheduled?: boolean })._onboardingScheduled) {
+      return
+    }
+    ;(this as WechatMiniprogram.Page.TrivialInstance & { _onboardingScheduled?: boolean })._onboardingScheduled = true
+
+    setTimeout(() => {
+      if (isOnboardingCompleted(user.user_id) || this.data.guideVisible) return
+      this.setData({
+        guideVisible: true,
+        guideStep: 0,
+        showUserMenu: false,
+        fabExpanded: false,
+        showSearch: false,
+      }, () => {
+        this.updateGuideStep()
+      })
+    }, 400)
+  },
+
+  updateGuideStep() {
+    const step = GUIDE_STEPS[this.data.guideStep]
+    if (!step) {
+      this.finishOnboarding()
+      return
+    }
+
+    if (step.prepare) {
+      step.prepare(this)
+    }
+
+    this.setData({
+      guideTitle: step.title,
+      guideDesc: step.desc,
+      guideRadius: step.radius,
+    }, () => {
+      setTimeout(() => this.measureGuideTarget(step.selector), 80)
+    })
+  },
+
+  measureGuideTarget(selector: string) {
+    const query = this.createSelectorQuery()
+    query.select(selector).boundingClientRect()
+    query.exec((res) => {
+      const rect = res[0] as WechatMiniprogram.BoundingClientRectCallbackResult | null
+      if (!rect || !rect.width || !rect.height) {
+        if (this.data.guideStep + 1 < GUIDE_STEPS.length) {
+          this.setData({ guideStep: this.data.guideStep + 1 }, () => this.updateGuideStep())
+        } else {
+          this.finishOnboarding()
+        }
+        return
+      }
+
+      const padding = 6
+      this.setData({
+        guideRect: {
+          top: rect.top - padding,
+          left: rect.left - padding,
+          width: rect.width + padding * 2,
+          height: rect.height + padding * 2,
+        },
+      })
+    })
+  },
+
+  onGuideNext() {
+    const nextStep = this.data.guideStep + 1
+    if (nextStep >= GUIDE_STEPS.length) {
+      this.finishOnboarding()
+      return
+    }
+    this.setData({ guideStep: nextStep }, () => this.updateGuideStep())
+  },
+
+  onGuideSkip() {
+    this.finishOnboarding()
+  },
+
+  finishOnboarding() {
+    const user = getCurrentUser()
+    if (user) {
+      markOnboardingCompleted(user.user_id)
+    }
+    this.setData({ guideVisible: false })
   },
 })

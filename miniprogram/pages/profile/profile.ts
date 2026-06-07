@@ -11,6 +11,7 @@ import {
   getDiaryScrollIntoViewId,
   type ObservationDiary,
 } from '../../utils/observation-diary'
+import { canPublishObservation } from '../../utils/permissions'
 import { getCurrentUser } from '../../utils/session'
 
 interface NotificationView {
@@ -137,10 +138,7 @@ Page({
           record_count: item.record_count,
           latest_time_text: item.latest_time_text,
         })),
-        isObserver: (() => {
-          const currentUser = getCurrentUser()
-          return Boolean(currentUser && currentUser.role === 'observer')
-        })(),
+        isObserver: canPublishObservation(getCurrentUser()),
         ...this.buildNotificationData(userId),
         ...this.buildDiaryData(profile.diary),
       })

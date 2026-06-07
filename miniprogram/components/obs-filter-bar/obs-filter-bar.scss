@@ -1,10 +1,15 @@
+.filter-wrap {
+  background: #fff;
+  border-bottom: 1rpx solid #e8ede8;
+}
+
 .filter-bar {
   display: flex;
   align-items: center;
   gap: 12rpx;
   padding: 12rpx 16rpx;
-  background: #fff;
-  border-bottom: 1rpx solid #e8ede8;
+  overflow-x: auto;
+  flex-wrap: nowrap;
 }
 
 .filter-chip {
@@ -15,6 +20,7 @@
   border-radius: 24rpx;
   background: #f5f9f0;
   border: 1rpx solid #e0ebe0;
+  flex-shrink: 0;
 }
 
 .filter-chip.active {
@@ -63,4 +69,51 @@
 
 .filter-reset:active {
   opacity: 0.7;
+}
+
+.filter-chip.search.active {
+  background: #eef5e8;
+  border-color: #b8d4b8;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 0 16rpx 12rpx;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 64rpx;
+  padding: 0 20rpx;
+  border-radius: 32rpx;
+  background: #f5f9f0;
+  border: 1rpx solid #e0ebe0;
+  font-size: 26rpx;
+  color: #2d3a2e;
+}
+
+.search-clear {
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 40rpx;
+  text-align: center;
+  font-size: 32rpx;
+  color: #9ab09b;
+}
+
+.search-btn {
+  flex-shrink: 0;
+  padding: 12rpx 24rpx;
+  border-radius: 24rpx;
+  background: #4c8c4a;
+  font-size: 26rpx;
+  color: #fff;
+}
+
+.search-btn:active {
+  opacity: 0.85;
 }

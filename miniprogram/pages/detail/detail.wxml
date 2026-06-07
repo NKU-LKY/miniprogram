@@ -101,6 +101,9 @@
     </view>
 
     <view class="owner-bar" wx:if="{{isOwner}}">
+      <view class="owner-btn comments-toggle" bindtap="onToggleComments">
+        {{commentsEnabled ? '关闭评论区' : '开启评论区'}}
+      </view>
       <view class="owner-btn withdraw" bindtap="onWithdrawObservation">撤回此记录</view>
     </view>
 
@@ -158,7 +161,8 @@
     </view>
 
     <view class="comments-section">
-      <text class="section-title">评论 {{detail.comment_count}}</text>
+      <text class="section-title" wx:if="{{commentsEnabled}}">评论 {{detail.comment_count}}</text>
+      <text class="section-title" wx:else>该记录的评论区已关闭</text>
 
       <view class="comment-list" wx:if="{{comments.length > 0}}">
         <view class="comment-thread" wx:for="{{comments}}" wx:key="comment_id">
@@ -173,6 +177,7 @@
               <text class="comment-content">{{item.content}}</text>
               <view class="comment-actions">
                 <text
+                  wx:if="{{commentsEnabled}}"
                   class="reply-btn"
                   data-id="{{item.comment_id}}"
                   data-nickname="{{item.author_nickname}}"
@@ -202,6 +207,7 @@
                 </text>
                 <view class="comment-actions">
                   <text
+                    wx:if="{{commentsEnabled}}"
                     class="reply-btn"
                     data-id="{{reply.comment_id}}"
                     data-nickname="{{reply.author_nickname}}"
@@ -222,12 +228,13 @@
 
       <view class="comments-empty" wx:else>
         <text class="comments-empty-icon">💬</text>
-        <text class="comments-empty-text">暂无评论，快来抢沙发吧</text>
+        <text class="comments-empty-text" wx:if="{{commentsEnabled}}">暂无评论，快来抢沙发吧</text>
+        <text class="comments-empty-text" wx:else>暂无评论</text>
       </view>
     </view>
   </scroll-view>
 
-  <view class="comment-bar">
+  <view class="comment-bar" wx:if="{{commentsEnabled}}">
     <view class="reply-banner" wx:if="{{replyTarget}}">
       <text class="reply-banner-text">回复 @{{replyTarget.author_nickname}}</text>
       <text class="reply-banner-cancel" bindtap="onCancelReply">取消</text>

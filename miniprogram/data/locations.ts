@@ -30,19 +30,45 @@ export function getLocationByName(name: string): CampusLocation | undefined {
   return CAMPUS_LOCATION_POINTS.find((item) => item.name === name)
 }
 
-/** 解析观测记录坐标：优先使用地图选点，否则回退到预设地点 */
+/** 解析观测记录坐标：优先匹配预设地点，再回退到有效坐标 */
 export function resolveObservationCoordinate(obs: {
   location_name: string
-  latitude?: number
-  longitude?: number
+  latitude?: number | string
+  longitude?: number | string
 }): CampusLocation | null {
-  if (typeof obs.latitude === 'number' && typeof obs.longitude === 'number') {
+  const trimmedName = (obs.location_name || '').trim()
+  const preset = trimmedName ? getLocationByName(trimmedName) : undefined
+  const latitude = parseCoordinate(obs.latitude)
+  const longitude = parseCoordinate(obs.longitude)
+
+  if (preset) {
     return {
-      name: obs.location_name,
-      latitude: obs.latitude,
-      longitude: obs.longitude,
+      name: preset.name,
+      latitude: preset.latitude,
+      longitude: preset.longitude,
     }
   }
-  const preset = getLocationByName(obs.location_name)
-  return preset || null
+
+  if (latitude !== undefined && longitude !== undefined) {
+    return {
+      name: trimmedName || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+      latitude,
+      longitude,
+    }
+  }
+
+  return null
+}
+
+function parseCoordinate(value: unknown): number | undefined {
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return undefined
+    const parsed = Number(trimmed)
+    return Number.isNaN(parsed) ? undefined : parsed
+  }
+  return undefined
 }

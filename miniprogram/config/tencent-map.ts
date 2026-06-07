@@ -9,4 +9,6 @@
  * 2. Key 未绑定本小程序 AppID（status 110/311）
  * 3. 开发者工具未勾选「不校验合法域名」且未配置服务器域名
  */
-export const TENCENT_MAP_KEY = 'W52BZ-R5O6W-32KRP-3FCRP-QOVGS-2RBPE'
+export const TENCENT_MAP_KEY = ''
+
+//export const TENCENT_MAP_KEY = 'W52BZ-R5O6W-32KRP-3FCRP-QOVGS-2RBPE'
