@@ -19,9 +19,14 @@
         data-tab="comments"
         bindtap="onTabChange"
       >评论</view>
+      <view
+        class="tab-item {{activeTab === 'appeals' ? 'active' : ''}}"
+        data-tab="appeals"
+        bindtap="onTabChange"
+      >申诉{{appealList.length > 0 ? ' (' + appealList.length + ')' : ''}}</view>
     </view>
 
-    <scroll-view class="scrollarea" scroll-y type="list">
+    <scroll-view class="scrollarea" scroll-y enhanced show-scrollbar="{{false}}">
       <view class="loading" wx:if="{{loading}}">
         <text>加载中...</text>
       </view>
@@ -39,9 +44,25 @@
             <text class="obs-note">{{item.note}}</text>
             <view class="obs-meta">
               <text class="meta-text">{{item.publisher_nickname}} · {{item.time_text}}</text>
+              <text class="featured-tag" wx:if="{{item.is_featured}}">⭐ 精选</text>
+              <text class="appeal-tag" wx:if="{{item.has_pending_appeal}}">📋 待处理申诉</text>
               <text class="status-tag {{item.is_hidden ? 'hidden' : ''}}">{{item.status_label}}</text>
             </view>
             <view class="action-row">
+              <view
+                wx:if="{{!item.is_hidden && !item.is_featured}}"
+                class="action-btn featured"
+                data-id="{{item.obs_id}}"
+                data-action="set"
+                bindtap="onToggleFeatured"
+              >设为精选</view>
+              <view
+                wx:if="{{!item.is_hidden && item.is_featured}}"
+                class="action-btn featured active"
+                data-id="{{item.obs_id}}"
+                data-action="unset"
+                bindtap="onToggleFeatured"
+              >取消精选</view>
               <view
                 wx:if="{{!item.is_hidden}}"
                 class="action-btn hide"
@@ -49,11 +70,17 @@
                 bindtap="onHideObservation"
               >隐藏</view>
               <view
-                wx:else
+                wx:elif="{{item.is_hidden && !item.has_pending_appeal}}"
                 class="action-btn restore"
                 data-id="{{item.obs_id}}"
                 bindtap="onRestoreObservation"
               >恢复</view>
+              <view
+                wx:elif="{{item.is_hidden && item.has_pending_appeal}}"
+                class="action-btn link"
+                data-tab="appeals"
+                bindtap="onGoAppealsTab"
+              >查看申诉</view>
               <view class="action-btn link" data-id="{{item.obs_id}}" bindtap="onGoDetail">查看</view>
             </view>
           </view>
@@ -83,6 +110,42 @@
 
         <view class="empty" wx:if="{{commentList.length === 0}}">
           <text>暂无评论</text>
+        </view>
+      </block>
+
+      <block wx:if="{{activeTab === 'appeals' && !loading}}">
+        <view class="appeal-card" wx:for="{{appealList}}" wx:key="appeal_id">
+          <image
+            class="obs-thumb"
+            src="{{item.photo_url}}"
+            mode="aspectFill"
+            data-id="{{item.obs_id}}"
+            bindtap="onGoDetail"
+          ></image>
+          <view class="obs-body">
+            <text class="obs-note">{{item.obs_note}}</text>
+            <view class="obs-meta">
+              <text class="meta-text">{{item.appellant_nickname}} · {{item.time_text}}</text>
+            </view>
+            <text class="appeal-reason">申诉原因：{{item.reason}}</text>
+            <view class="action-row">
+              <view
+                class="action-btn restore"
+                data-id="{{item.appeal_id}}"
+                bindtap="onApproveAppeal"
+              >取消隐藏</view>
+              <view
+                class="action-btn hide"
+                data-id="{{item.appeal_id}}"
+                bindtap="onRejectAppeal"
+              >驳回申诉</view>
+              <view class="action-btn link" data-id="{{item.obs_id}}" bindtap="onGoDetail">查看</view>
+            </view>
+          </view>
+        </view>
+
+        <view class="empty" wx:if="{{appealList.length === 0}}">
+          <text>暂无待处理申诉</text>
         </view>
       </block>
     </scroll-view>

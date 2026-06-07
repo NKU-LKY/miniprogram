@@ -1,7 +1,3 @@
-import type { Observation } from '../types/observation'
-
-export type TimeRangeKey = 'all' | '7d' | '30d' | '90d'
-
 export interface FilterOption {
   label: string
   value: string
@@ -9,12 +5,13 @@ export interface FilterOption {
 
 export interface TimeFilterOption {
   label: string
-  value: TimeRangeKey
+  value: string
 }
 
 export interface ObservationFilterParams {
   species?: string
-  timeRange?: TimeRangeKey
+  timeRange?: string
+  featuredOnly?: boolean
 }
 
 export const TIME_RANGE_OPTIONS: TimeFilterOption[] = [
@@ -24,21 +21,30 @@ export const TIME_RANGE_OPTIONS: TimeFilterOption[] = [
   { label: '近3个月', value: '90d' },
 ]
 
-const TIME_RANGE_DAYS: Record<Exclude<TimeRangeKey, 'all'>, number> = {
+const TIME_RANGE_DAYS: { [key: string]: number } = {
   '7d': 7,
   '30d': 30,
   '90d': 90,
 }
 
-export function collectSpeciesOptions(observations: Observation[]): FilterOption[] {
+interface FilterableObservation {
+  species_name?: string
+  submitted_at: string
+}
+
+function getSpeciesName(obs: FilterableObservation): string {
+  return obs.species_name ? obs.species_name.trim() : ''
+}
+
+export function collectSpeciesOptions(observations: FilterableObservation[]): FilterOption[] {
   const options: FilterOption[] = [{ label: '全部物种', value: '' }]
-  const names = new Set<string>()
+  const nameMap: { [key: string]: boolean } = {}
   let hasUnidentified = false
 
-  for (const obs of observations) {
-    const name = obs.species_name?.trim()
+  for (let i = 0; i < observations.length; i++) {
+    const name = getSpeciesName(observations[i])
     if (name) {
-      names.add(name)
+      nameMap[name] = true
     } else {
       hasUnidentified = true
     }
@@ -48,8 +54,9 @@ export function collectSpeciesOptions(observations: Observation[]): FilterOption
     options.push({ label: '待鉴定', value: '__unidentified__' })
   }
 
-  for (const name of Array.from(names).sort()) {
-    options.push({ label: name, value: name })
+  const names = Object.keys(nameMap).sort()
+  for (let j = 0; j < names.length; j++) {
+    options.push({ label: names[j], value: names[j] })
   }
 
   return options
@@ -58,42 +65,50 @@ export function collectSpeciesOptions(observations: Observation[]): FilterOption
 export function buildFilterParams(
   speciesOption: FilterOption,
   timeOption: TimeFilterOption,
+  featuredOnly?: boolean,
 ): ObservationFilterParams {
   return {
     species: speciesOption.value,
     timeRange: timeOption.value,
+    featuredOnly: featuredOnly || undefined,
   }
 }
 
 export function isFilterActive(
   speciesIndex: number,
   timeIndex: number,
+  featuredOnly?: boolean,
 ): boolean {
-  return speciesIndex > 0 || timeIndex > 0
+  return speciesIndex > 0 || timeIndex > 0 || Boolean(featuredOnly)
 }
 
-function matchesSpecies(obs: Observation, species?: string): boolean {
+function matchesSpecies(obs: FilterableObservation, species?: string): boolean {
   if (!species) return true
-  if (species === '__unidentified__') return !obs.species_name?.trim()
-  return obs.species_name?.trim() === species
+  const speciesName = getSpeciesName(obs)
+  if (species === '__unidentified__') return !speciesName
+  return speciesName === species
 }
 
-function matchesTimeRange(submittedAt: string, timeRange?: TimeRangeKey): boolean {
+function matchesTimeRange(submittedAt: string, timeRange?: string): boolean {
   if (!timeRange || timeRange === 'all') return true
   const days = TIME_RANGE_DAYS[timeRange]
+  if (!days) return true
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
   return new Date(submittedAt).getTime() >= cutoff
 }
 
-export function applyObservationFilter<T extends Observation>(
-  observations: T[],
+export function applyObservationFilter(
+  observations: FilterableObservation[],
   filter?: ObservationFilterParams,
-): T[] {
+): FilterableObservation[] {
   if (!filter) return observations
 
-  return observations.filter(
-    (obs) =>
-      matchesSpecies(obs, filter.species) &&
-      matchesTimeRange(obs.submitted_at, filter.timeRange),
-  )
+  const result: FilterableObservation[] = []
+  for (let i = 0; i < observations.length; i++) {
+    const obs = observations[i]
+    if (matchesSpecies(obs, filter.species) && matchesTimeRange(obs.submitted_at, filter.timeRange)) {
+      result.push(obs)
+    }
+  }
+  return result
 }

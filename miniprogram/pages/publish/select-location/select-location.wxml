@@ -1,0 +1,36 @@
+<navigation-bar title="选择观测地点" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<view class="page-body">
+  <map
+    id="pickerMap"
+    class="picker-map"
+    latitude="{{center.latitude}}"
+    longitude="{{center.longitude}}"
+    scale="{{scale}}"
+    markers="{{markers}}"
+    show-location
+    enable-zoom
+    enable-scroll
+    enable-rotate="{{false}}"
+    bindtap="onMapTap"
+  ></map>
+
+  <view class="locate-btn {{locating ? 'disabled' : ''}}" bindtap="onLocateMe">
+    <text class="locate-icon">◎</text>
+  </view>
+
+  <view class="hint-bar">
+    <text wx:if="{{locating}}">正在定位…</text>
+    <text wx:elif="{{resolvingName}}">正在解析附近地标…</text>
+    <text wx:elif="{{hasSelection}}">已选位置：{{selectedName}}</text>
+    <text wx:else>点击地图任意位置放置标记</text>
+  </view>
+
+  <view class="footer">
+    <view class="selected-preview" wx:if="{{hasSelection}}">
+      <text class="preview-label">观测地点</text>
+      <text class="preview-name">📍 {{selectedName}}</text>
+    </view>
+    <view class="confirm-btn {{hasSelection ? 'active' : ''}}" bindtap="onConfirm">确认选择</view>
+  </view>
+</view>

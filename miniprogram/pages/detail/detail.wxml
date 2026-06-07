@@ -4,15 +4,112 @@
   <scroll-view class="page" scroll-y type="list">
     <view class="photo-section" bindtap="onPreviewPhoto">
       <image class="hero-photo" src="{{detail.photo_url}}" mode="aspectFill"></image>
+      <view class="featured-ribbon" wx:if="{{detail.is_featured}}">⭐ 精选</view>
       <text class="photo-hint">点击查看大图</text>
     </view>
 
     <view class="rejected-banner" wx:if="{{detail.is_rejected}}">
       <text class="rejected-title">该记录已被隐藏</text>
-      <text class="rejected-desc">该内容不再对外展示</text>
+      <text class="rejected-desc">该内容不再对外展示，如有异议可提交申诉</text>
+    </view>
+
+    <view class="appeal-panel" wx:if="{{showAppealPanel}}">
+      <text class="panel-title">提交申诉</text>
+
+      <view class="appeal-status pending" wx:if="{{appeal && appeal.status === 'pending'}}">
+        <text class="appeal-status-title">{{appeal.status_label}}</text>
+        <text class="appeal-status-desc">申诉原因：{{appeal.reason}}</text>
+        <text class="appeal-status-time">提交于 {{appeal.time_text}}</text>
+      </view>
+
+      <view class="appeal-status rejected" wx:elif="{{appeal && appeal.status === 'rejected'}}">
+        <text class="appeal-status-title">{{appeal.status_label}}</text>
+        <text class="appeal-status-desc">你可以修改申诉原因后重新提交</text>
+      </view>
+
+      <block wx:if="{{canSubmitAppeal}}">
+        <textarea
+          class="appeal-textarea"
+          placeholder="请说明申诉原因，如认为记录符合平台规范等"
+          maxlength="500"
+          value="{{appealInput}}"
+          bindinput="onAppealInput"
+        />
+        <view
+          class="appeal-submit {{appealInput ? 'active' : ''}}"
+          bindtap="onSubmitAppeal"
+        >提交申诉</view>
+      </block>
+    </view>
+
+    <view class="identification-panel" wx:if="{{showIdentificationPanel && identification}}">
+      <text class="panel-title">物种鉴定</text>
+
+      <view class="panel-hint claimed-other" wx:if="{{identification.claimed_by_other}}">
+        <text>该记录已被 {{identification.reviewer_nickname}} 认领，暂不可操作</text>
+      </view>
+
+      <block wx:else>
+        <view class="panel-hint" wx:if="{{identification.claimed_by_me}}">
+          <text>你已认领此记录，请填写物种名称完成鉴定</text>
+        </view>
+        <view class="panel-hint" wx:elif="{{identification.can_claim}}">
+          <text>请先认领此记录，再进行物种鉴定</text>
+        </view>
+
+        <view class="identify-form" wx:if="{{identification.can_identify}}">
+          <view class="form-field">
+            <text class="field-label">鉴定物种 *</text>
+            <input
+              class="field-input"
+              placeholder="填写正式物种名称，如：麻雀"
+              maxlength="30"
+              value="{{speciesInput}}"
+              bindinput="onSpeciesInput"
+            />
+          </view>
+          <view class="form-field">
+            <text class="field-label">鉴定备注</text>
+            <input
+              class="field-input"
+              placeholder="可选，如鉴定依据或补充说明"
+              maxlength="100"
+              value="{{reviewNoteInput}}"
+              bindinput="onReviewNoteInput"
+            />
+          </view>
+        </view>
+
+        <view class="panel-actions">
+          <view
+            wx:if="{{identification.can_claim}}"
+            class="panel-btn claim"
+            bindtap="onClaimIdentification"
+          >认领此记录</view>
+          <view
+            wx:if="{{identification.can_release}}"
+            class="panel-btn release"
+            bindtap="onReleaseIdentification"
+          >释放认领</view>
+          <view
+            wx:if="{{identification.can_identify}}"
+            class="panel-btn submit {{speciesInput ? 'active' : ''}}"
+            bindtap="onSubmitIdentification"
+          >提交鉴定</view>
+        </view>
+      </block>
+    </view>
+
+    <view class="owner-bar" wx:if="{{isOwner}}">
+      <view class="owner-btn withdraw" bindtap="onWithdrawObservation">撤回此记录</view>
     </view>
 
     <view class="admin-bar" wx:if="{{isAdmin}}">
+      <view
+        wx:if="{{!isHidden}}"
+        class="admin-btn featured {{isFeatured ? 'active' : ''}}"
+        bindtap="onToggleFeatured"
+      >{{isFeatured ? '取消精选' : '设为精选'}}</view>
       <view
         wx:if="{{!isHidden}}"
         class="admin-btn hide"
@@ -39,6 +136,9 @@
       <view class="meta-row">
         <text class="meta-item">📍 {{detail.location_name}}</text>
         <text class="meta-item" wx:if="{{detail.species_name}}">🌿 {{detail.species_name}}</text>
+      </view>
+      <view class="location-detail-row" wx:if="{{detail.location_detail}}">
+        <text class="location-detail-text">{{detail.location_detail}}</text>
       </view>
 
       <view class="status-row" wx:if="{{detail.status_label}}">
@@ -69,13 +169,23 @@
               <text class="expert-tag" wx:if="{{item.is_expert}}">认证专家</text>
               <text class="comment-time">{{item.time_text}}</text>
             </view>
-            <text class="comment-content">{{item.content}}</text>
-            <view
-              wx:if="{{isAdmin}}"
-              class="comment-hide-btn"
-              data-id="{{item.comment_id}}"
-              bindtap="onHideComment"
-            >隐藏</view>
+            <text class="comment-content">
+              <text wx:if="{{item.reply_to_nickname}}" class="reply-prefix">回复 @{{item.reply_to_nickname}}：</text>{{item.content}}
+            </text>
+            <view class="comment-actions">
+              <text
+                class="reply-btn"
+                data-id="{{item.comment_id}}"
+                data-nickname="{{item.author_nickname}}"
+                catchtap="onReplyComment"
+              >回复</text>
+              <view
+                wx:if="{{isAdmin}}"
+                class="comment-hide-btn"
+                data-id="{{item.comment_id}}"
+                bindtap="onHideComment"
+              >隐藏</view>
+            </view>
           </view>
         </view>
       </view>
@@ -88,19 +198,25 @@
   </scroll-view>
 
   <view class="comment-bar">
-    <input
-      class="comment-input"
-      placeholder="说点什么……"
-      maxlength="200"
-      value="{{commentInput}}"
-      confirm-type="send"
-      bindinput="onCommentInput"
-      bindconfirm="onSubmitComment"
-    />
-    <view
-      class="send-btn {{commentInput ? 'active' : ''}}"
-      bindtap="onSubmitComment"
-    >发送</view>
+    <view class="reply-banner" wx:if="{{replyTarget}}">
+      <text class="reply-banner-text">回复 @{{replyTarget.author_nickname}}</text>
+      <text class="reply-banner-cancel" bindtap="onCancelReply">取消</text>
+    </view>
+    <view class="comment-bar-row">
+      <input
+        class="comment-input"
+        placeholder="{{commentPlaceholder}}"
+        maxlength="200"
+        value="{{commentInput}}"
+        confirm-type="send"
+        bindinput="onCommentInput"
+        bindconfirm="onSubmitComment"
+      />
+      <view
+        class="send-btn {{commentInput ? 'active' : ''}}"
+        bindtap="onSubmitComment"
+      >发送</view>
+    </view>
   </view>
 </view>
 

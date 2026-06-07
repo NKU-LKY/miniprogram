@@ -37,7 +37,7 @@
     </view>
 
     <view class="section-card">
-      <text class="section-title">常出现地点</text>
+      <text class="section-title">{{detail.is_animal ? '常出现地点' : '常被发现于'}}</text>
       <view class="location-list" wx:if="{{detail.common_locations.length > 0}}">
         <view class="location-item" wx:for="{{detail.common_locations}}" wx:key="name">
           <view class="location-row">

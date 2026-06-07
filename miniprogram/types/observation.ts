@@ -7,6 +7,7 @@ export type ObservationStatus =
   | 'identified'
   | 'rejected'
   | 'pending_review'
+  | 'withdrawn'
 
 /** 观测记录实体 */
 export interface Observation {
@@ -14,12 +15,28 @@ export interface Observation {
   user_id: string
   species_name?: string
   location_name: string
+  /** 用户补充的详细地址备注（选填） */
+  location_detail?: string
+  /** 地图选点的实际纬度（gcj02） */
+  latitude?: number
+  /** 地图选点的实际经度（gcj02） */
+  longitude?: number
   note: string
   status: ObservationStatus
   submitted_at: string
   photo_url: string
   like_count: number
   comment_count: number
+  /** 管理员标记的精选记录 */
+  is_featured?: boolean
+  /** 认领该鉴定的审阅员 */
+  reviewer_id?: string
+  /** 认领时间 */
+  claimed_at?: string
+  /** 鉴定完成时间 */
+  identified_at?: string
+  /** 鉴定备注 */
+  review_note?: string
 }
 
 /** 首页信息流卡片展示数据 */
@@ -28,6 +45,7 @@ export interface ObservationFeedItem {
   photo_url: string
   note: string
   location_name: string
+  location_detail?: string
   species_name?: string
   status: ObservationStatus
   status_label?: string
@@ -35,6 +53,7 @@ export interface ObservationFeedItem {
   time_text: string
   like_count: number
   comment_count: number
+  is_featured: boolean
   publisher: {
     user_id: string
     nickname: string
@@ -60,6 +79,9 @@ export interface CreateObservationParams {
   user_id: string
   photo_url: string
   location_name: string
+  location_detail?: string
+  latitude?: number
+  longitude?: number
   note?: string
   species_name?: string
   needs_identification: boolean

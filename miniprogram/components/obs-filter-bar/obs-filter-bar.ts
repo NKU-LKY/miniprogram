@@ -22,6 +22,10 @@ Component({
       type: Boolean,
       value: false,
     },
+    featuredOnly: {
+      type: Boolean,
+      value: false,
+    },
   },
 
   methods: {
@@ -37,6 +41,10 @@ Component({
         type: 'time',
         index: Number(e.detail.value),
       })
+    },
+
+    onFeaturedToggle() {
+      this.triggerEvent('change', { type: 'featured' })
     },
 
     onReset() {

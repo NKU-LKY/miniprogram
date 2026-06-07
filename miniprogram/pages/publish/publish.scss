@@ -132,6 +132,15 @@ page {
   color: #9ab09b;
 }
 
+.location-detail-input {
+  margin-top: 12rpx;
+  height: 64rpx;
+  padding: 0 16rpx;
+  background: #f8fbf6;
+  border-radius: 10rpx;
+  box-sizing: border-box;
+}
+
 .relocate-btn {
   flex-shrink: 0;
   padding: 12rpx 20rpx;
@@ -149,27 +158,36 @@ page {
   opacity: 0.75;
 }
 
-.picker-value {
+.map-picker-btn {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 26rpx;
-  color: #333;
+  margin-top: 8rpx;
+  padding: 14rpx 16rpx;
+  background: #f3f8f1;
+  border-radius: 10rpx;
+  border: 1rpx solid #dce8dc;
 }
 
-.picker-arrow {
+.map-picker-btn:active {
+  opacity: 0.85;
+}
+
+.map-picker-icon {
+  font-size: 28rpx;
+  margin-right: 10rpx;
+}
+
+.map-picker-text {
+  flex: 1;
+  font-size: 24rpx;
+  color: #4c8c4a;
+  font-weight: 500;
+}
+
+.map-picker-arrow {
   font-size: 32rpx;
   color: #9ab09b;
   line-height: 1;
-}
-
-.picker-sub {
-  padding: 6rpx 0 2rpx;
-}
-
-.picker-sub-label {
-  font-size: 22rpx;
-  color: #7a9a7b;
 }
 
 .switch-row {

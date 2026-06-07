@@ -13,6 +13,10 @@
         </view>
 
         <view class="user-menu" wx:if="{{showUserMenu}}">
+          <view class="menu-item profile" bindtap="onGoProfile">个人中心</view>
+          <view wx:if="{{isReviewer}}" class="menu-item reviewer" bindtap="onGoReviewerQueue">
+            待鉴定队列{{pendingIdentificationCount > 0 ? ' (' + pendingIdentificationCount + ')' : ''}}
+          </view>
           <view wx:if="{{isAdmin}}" class="menu-item admin" bindtap="onGoAdminUsers">用户管理</view>
           <view wx:if="{{isAdmin}}" class="menu-item admin" bindtap="onGoAdminModeration">内容管控</view>
           <view class="menu-item" bindtap="onLogout">退出登录</view>
@@ -24,6 +28,16 @@
         <text class="map-entry-text">校园地图</text>
         <text class="map-entry-desc">查看观测分布</text>
         <text class="map-entry-arrow">›</text>
+      </view>
+
+      <view class="reviewer-entry" wx:if="{{isReviewer}}" bindtap="onGoReviewerQueue">
+        <text class="reviewer-entry-icon">🔬</text>
+        <view class="reviewer-entry-meta">
+          <text class="reviewer-entry-text">待鉴定队列</text>
+          <text class="reviewer-entry-desc">认领并完成物种鉴定</text>
+        </view>
+        <text class="reviewer-entry-badge" wx:if="{{pendingIdentificationCount > 0}}">{{pendingIdentificationCount}}</text>
+        <text class="reviewer-entry-arrow">›</text>
       </view>
 
       <view class="tab-bar">
@@ -52,6 +66,7 @@
     time-options="{{timeOptions}}"
     species-index="{{speciesIndex}}"
     time-index="{{timeIndex}}"
+    featured-only="{{featuredOnly}}"
     show-reset="{{filterActive}}"
     bind:change="onFilterChange"
     bind:reset="onResetFilter"
@@ -76,10 +91,12 @@
         data-id="{{item.obs_id}}"
       >
         <image class="obs-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
+        <view class="featured-badge" wx:if="{{item.is_featured}}">⭐ 精选</view>
         <view class="obs-body">
           <view class="obs-top">
             <image class="publisher-avatar-sm" src="{{item.publisher_avatar_url}}" mode="aspectFill"></image>
             <text class="publisher-name">{{item.publisher_nickname}}</text>
+            <text class="status-tag feed" wx:if="{{item.status_label}}">{{item.status_label}}</text>
             <text class="publisher-time">{{item.time_text}}</text>
           </view>
           <text class="obs-note">{{item.note}}</text>
@@ -124,6 +141,7 @@
         data-id="{{item.obs_id}}"
       >
         <image class="obs-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
+        <view class="featured-badge" wx:if="{{item.is_featured}}">⭐ 精选</view>
         <view class="obs-body">
           <view class="obs-top">
             <text class="status-tag" wx:if="{{item.status_label}}">{{item.status_label}}</text>
@@ -191,7 +209,7 @@
         </view>
 
         <view class="species-info">
-          <text class="species-info-item" wx:if="{{item.top_location}}">📍 常去：{{item.top_location}}</text>
+          <text class="species-info-item" wx:if="{{item.top_location}}">📍 {{item.is_animal ? '常去' : '常被发现于'}}：{{item.top_location}}</text>
           <text class="species-info-item" wx:if="{{item.is_animal && item.active_periods}}">🕐 活跃：{{item.active_periods}}</text>
         </view>
       </view>

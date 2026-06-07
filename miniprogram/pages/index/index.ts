@@ -1,3 +1,4 @@
+import { countPendingIdentification } from '../../services/local/identification-api'
 import { findUserById } from '../../services/local/user-store'
 import { getFeedSpeciesOptions, getMySpeciesOptions, listFeed, listMyFeed } from '../../services/local/observation-api'
 import { listSpeciesArchives } from '../../services/local/species-api'
@@ -33,6 +34,7 @@ interface FlatFeedItem {
   comment_count: number
   publisher_nickname: string
   publisher_avatar_url: string
+  is_featured: boolean
 }
 
 function flattenItem(item: ObservationFeedItem): FlatFeedItem {
@@ -48,6 +50,7 @@ function flattenItem(item: ObservationFeedItem): FlatFeedItem {
     comment_count: item.comment_count,
     publisher_nickname: item.publisher.nickname,
     publisher_avatar_url: item.publisher.avatar_url,
+    is_featured: item.is_featured,
   }
 }
 
@@ -74,11 +77,14 @@ Page({
     showUserMenu: false,
     refreshing: false,
     isObserver: false,
+    isReviewer: false,
     isAdmin: false,
+    pendingIdentificationCount: 0,
     speciesOptions: [{ label: '全部物种', value: '' }] as FilterOption[],
     timeOptions: TIME_RANGE_OPTIONS as TimeFilterOption[],
     speciesIndex: 0,
     timeIndex: 0,
+    featuredOnly: false,
     filterActive: false,
     speciesList: [] as SpeciesArchiveSummary[],
     speciesLoading: false,
@@ -120,13 +126,26 @@ Page({
     const user = getCurrentUser()
     if (!user) return
     getApp<IAppOption>().setCurrentUser(user)
+    const isReviewer = user.role === 'reviewer'
     this.setData({
       nickname: user.nickname || '未命名用户',
       avatarUrl: user.avatar_url || '',
       roleLabel: ROLE_LABELS[user.role] || '',
       isObserver: user.role === 'observer',
+      isReviewer,
       isAdmin: user.role === 'admin',
+      pendingIdentificationCount: isReviewer ? countPendingIdentification() : 0,
     })
+  },
+
+  onGoProfile() {
+    this.setData({ showUserMenu: false })
+    wx.navigateTo({ url: '/pages/profile/profile' })
+  },
+
+  onGoReviewerQueue() {
+    this.setData({ showUserMenu: false })
+    wx.navigateTo({ url: '/pages/reviewer/queue/queue' })
   },
 
   onGoAdminUsers() {
@@ -163,46 +182,54 @@ Page({
     const speciesOptions =
       this.data.activeTab === 'feed'
         ? getFeedSpeciesOptions()
-        : getMySpeciesOptions(user?.user_id || '')
+        : getMySpeciesOptions((user && user.user_id) || '')
 
     const speciesIndex = Math.min(this.data.speciesIndex, Math.max(speciesOptions.length - 1, 0))
 
     this.setData({
       speciesOptions,
       speciesIndex,
-      filterActive: isFilterActive(speciesIndex, this.data.timeIndex),
+      filterActive: isFilterActive(speciesIndex, this.data.timeIndex, this.data.featuredOnly),
     })
   },
 
   getCurrentFilter(): ObservationFilterParams {
-    const { speciesOptions, speciesIndex, timeOptions, timeIndex } = this.data
-    return buildFilterParams(speciesOptions[speciesIndex], timeOptions[timeIndex])
+    const { speciesOptions, speciesIndex, timeOptions, timeIndex, featuredOnly } = this.data
+    return buildFilterParams(speciesOptions[speciesIndex], timeOptions[timeIndex], featuredOnly)
   },
 
   onFilterChange(e: WechatMiniprogram.CustomEvent) {
-    const { type, index } = e.detail as { type: 'species' | 'time'; index: number }
-    const speciesIndex = type === 'species' ? index : this.data.speciesIndex
-    const timeIndex = type === 'time' ? index : this.data.timeIndex
+    const { type, index } = e.detail as { type: 'species' | 'time' | 'featured'; index?: number }
+    const speciesIndex = type === 'species' && index !== undefined ? index : this.data.speciesIndex
+    const timeIndex = type === 'time' && index !== undefined ? index : this.data.timeIndex
+    const featuredOnly = type === 'featured' ? !this.data.featuredOnly : this.data.featuredOnly
+    const filter = buildFilterParams(
+      this.data.speciesOptions[speciesIndex],
+      this.data.timeOptions[timeIndex],
+      featuredOnly,
+    )
 
     this.setData({
       speciesIndex,
       timeIndex,
-      filterActive: isFilterActive(speciesIndex, timeIndex),
+      featuredOnly,
+      filterActive: isFilterActive(speciesIndex, timeIndex, featuredOnly),
     })
 
     if (this.data.activeTab === 'feed') {
-      this.loadFeed(true)
+      this.loadFeed(true, filter)
     } else {
-      this.loadMyFeed(true)
+      this.loadMyFeed(true, filter)
     }
   },
 
   onResetFilter() {
-    this.setData({ speciesIndex: 0, timeIndex: 0, filterActive: false })
+    const filter = buildFilterParams(this.data.speciesOptions[0], this.data.timeOptions[0], false)
+    this.setData({ speciesIndex: 0, timeIndex: 0, featuredOnly: false, filterActive: false })
     if (this.data.activeTab === 'feed') {
-      this.loadFeed(true)
+      this.loadFeed(true, filter)
     } else {
-      this.loadMyFeed(true)
+      this.loadMyFeed(true, filter)
     }
   },
 
@@ -252,6 +279,7 @@ Page({
       showUserMenu: false,
       speciesIndex: 0,
       timeIndex: 0,
+      featuredOnly: false,
       filterActive: false,
     })
 
@@ -284,7 +312,7 @@ Page({
     }
   },
 
-  loadFeed(reset: boolean) {
+  loadFeed(reset: boolean, filterOverride?: ObservationFilterParams) {
     if (reset) {
       this.setData({ loading: true, page: 1, hasMore: true, loadingMore: false })
     } else {
@@ -293,7 +321,7 @@ Page({
     }
 
     const page = reset ? 1 : this.data.page
-    const filter = this.getCurrentFilter()
+    const filter = filterOverride || this.getCurrentFilter()
 
     try {
       const result = listFeed(page, PAGE_SIZE, filter)
@@ -321,7 +349,7 @@ Page({
     }
   },
 
-  loadMyFeed(reset: boolean) {
+  loadMyFeed(reset: boolean, filterOverride?: ObservationFilterParams) {
     const user = getCurrentUser()
     if (!user) return
 
@@ -333,7 +361,7 @@ Page({
     }
 
     const page = reset ? 1 : this.data.myPage
-    const filter = this.getCurrentFilter()
+    const filter = filterOverride || this.getCurrentFilter()
 
     try {
       const result = listMyFeed(user.user_id, page, PAGE_SIZE, filter)

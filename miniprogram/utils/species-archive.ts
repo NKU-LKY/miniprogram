@@ -115,7 +115,7 @@ function buildSummary(speciesName: string, observations: Observation[]): Species
     record_count: sorted.length,
     cover_photo: sorted[0].photo_url,
     preview_photos: sorted.slice(0, 3).map((obs) => obs.photo_url),
-    top_location: locations[0]?.name || '',
+    top_location: (locations[0] && locations[0].name) || '',
     active_periods: activePeriods,
     latest_time_text: formatRelativeTime(sorted[0].submitted_at),
   }

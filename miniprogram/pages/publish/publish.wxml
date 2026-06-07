@@ -35,24 +35,26 @@
         <view class="location-display">
           <text class="location-icon">📍</text>
           <text wx:if="{{locating}}" class="location-text muted">正在定位…</text>
+          <text wx:elif="{{resolvingName}}" class="location-text muted">正在解析地点…</text>
           <text wx:elif="{{locationName}}" class="location-text">{{locationName}}</text>
-          <text wx:else class="location-text muted">{{locationFailed ? '定位失败，请从下方选择' : '等待定位'}}</text>
+          <text wx:else class="location-text muted">{{locationFailed ? '定位失败，请在地图上选择' : '等待定位'}}</text>
         </view>
-        <view class="relocate-btn {{locating ? 'disabled' : ''}}" bindtap="locateByDevice">
-          <text>{{locating ? '定位中' : '重新定位'}}</text>
+        <view class="relocate-btn {{locating || resolvingName ? 'disabled' : ''}}" bindtap="locateByDevice">
+          <text>{{locating ? '定位中' : resolvingName ? '解析中' : '重新定位'}}</text>
         </view>
       </view>
-      <picker
-        mode="selector"
-        range="{{locationOptions}}"
-        value="{{locationIndex >= 0 ? locationIndex : 0}}"
-        bindchange="onLocationChange"
-      >
-        <view class="picker-value picker-sub">
-          <text class="picker-sub-label">手动调整地点</text>
-          <text class="picker-arrow">›</text>
-        </view>
-      </picker>
+      <view class="map-picker-btn" bindtap="onOpenMapPicker">
+        <text class="map-picker-icon">🗺</text>
+        <text class="map-picker-text">在地图上选择地点</text>
+        <text class="map-picker-arrow">›</text>
+      </view>
+      <input
+        class="field-input location-detail-input"
+        placeholder="详细地址（选填），如：东门花坛旁第三棵银杏"
+        maxlength="100"
+        value="{{locationDetail}}"
+        bindinput="onLocationDetailInput"
+      />
     </view>
 
     <view class="field">
@@ -75,6 +77,18 @@
         checked="{{needsIdentification}}"
         color="#4c8c4a"
         bindchange="onIdentificationChange"
+      />
+    </view>
+
+    <view class="switch-row">
+      <view class="switch-meta">
+        <text class="switch-title">暂存填写内容</text>
+        <text class="switch-desc">保存到本地，下次打开自动恢复，发布后清除</text>
+      </view>
+      <switch
+        checked="{{saveDraftEnabled}}"
+        color="#4c8c4a"
+        bindchange="onDraftToggle"
       />
     </view>
   </view>

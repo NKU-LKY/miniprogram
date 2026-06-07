@@ -130,6 +130,22 @@ page {
   background: #fff0f0;
 }
 
+.featured-tag {
+  font-size: 20rpx;
+  color: #a67c00;
+  background: #fff8e8;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+
+.appeal-tag {
+  font-size: 20rpx;
+  color: #3a6ea5;
+  background: #e8f0fa;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+
 .comment-card {
   padding: 20rpx;
   margin-bottom: 12rpx;
@@ -186,6 +202,16 @@ page {
   background: #eef8ec;
 }
 
+.action-btn.featured {
+  color: #a67c00;
+  background: #fff8e8;
+}
+
+.action-btn.featured.active {
+  color: #7a5c00;
+  background: #fff3cc;
+}
+
 .action-btn.link {
   color: #3a6ea5;
   background: #e8f0fa;
@@ -193,4 +219,22 @@ page {
 
 .action-btn:active {
   opacity: 0.85;
+}
+
+.appeal-card {
+  display: flex;
+  padding: 16rpx;
+  margin-bottom: 12rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 12rpx rgba(45, 90, 46, 0.06);
+}
+
+.appeal-reason {
+  display: block;
+  font-size: 24rpx;
+  color: #5a7a5b;
+  line-height: 1.5;
+  margin-bottom: 12rpx;
+  word-break: break-all;
 }

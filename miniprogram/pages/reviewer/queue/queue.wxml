@@ -1,0 +1,74 @@
+<navigation-bar title="待鉴定队列" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<view class="page-body">
+  <view class="forbidden" wx:if="{{forbidden}}">
+    <text class="forbidden-icon">🔒</text>
+    <text class="forbidden-title">无访问权限</text>
+    <text class="forbidden-desc">仅审阅员可查看待鉴定队列</text>
+  </view>
+
+  <block wx:else>
+    <view class="summary-bar">
+      <text class="summary-text">共 {{pendingCount}} 条待鉴定记录</text>
+      <text class="summary-hint">认领后可填写物种名称完成鉴定</text>
+    </view>
+
+    <scroll-view class="scrollarea" scroll-y type="list">
+      <view class="loading" wx:if="{{loading}}">
+        <text>加载中...</text>
+      </view>
+
+      <block wx:if="{{!loading}}">
+        <view class="queue-card" wx:for="{{queueList}}" wx:key="obs_id">
+          <image
+            class="queue-thumb"
+            src="{{item.photo_url}}"
+            mode="aspectFill"
+            data-id="{{item.obs_id}}"
+            bindtap="onGoDetail"
+          ></image>
+          <view class="queue-body">
+            <text class="queue-note">{{item.note}}</text>
+            <view class="queue-meta">
+              <text class="meta-text">📍 {{item.location_name}}</text>
+              <text class="meta-text">{{item.publisher_nickname}} · {{item.time_text}}</text>
+            </view>
+            <view class="claim-row" wx:if="{{item.is_claimed_by_other}}">
+              <text class="claim-tag other">已被 {{item.reviewer_nickname}} 认领</text>
+            </view>
+            <view class="claim-row" wx:elif="{{item.is_claimed_by_me}}">
+              <text class="claim-tag mine">我已认领 · {{item.claimed_time_text}}</text>
+            </view>
+            <view class="action-row">
+              <view
+                wx:if="{{!item.is_claimed_by_me && !item.is_claimed_by_other}}"
+                class="action-btn claim"
+                data-id="{{item.obs_id}}"
+                bindtap="onClaim"
+              >认领</view>
+              <view
+                wx:if="{{item.is_claimed_by_me}}"
+                class="action-btn release"
+                data-id="{{item.obs_id}}"
+                bindtap="onRelease"
+              >释放</view>
+              <view
+                wx:if="{{item.is_claimed_by_me}}"
+                class="action-btn identify"
+                data-id="{{item.obs_id}}"
+                bindtap="onGoDetail"
+              >去鉴定</view>
+              <view class="action-btn link" data-id="{{item.obs_id}}" bindtap="onGoDetail">查看</view>
+            </view>
+          </view>
+        </view>
+
+        <view class="empty" wx:if="{{queueList.length === 0}}">
+          <text class="empty-icon">✅</text>
+          <text class="empty-title">暂无待鉴定记录</text>
+          <text class="empty-desc">所有求鉴定记录均已处理完毕</text>
+        </view>
+      </block>
+    </scroll-view>
+  </block>
+</view>

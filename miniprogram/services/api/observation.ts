@@ -14,6 +14,8 @@ import {
   getObservationDetail as localGetObservationDetail,
   listFeed as localListFeed,
   listMyFeed as localListMyFeed,
+  withdrawObservation as localWithdrawObservation,
+  type WithdrawObservationResult,
 } from '../local/observation-api'
 import { USE_LOCAL_BACKEND } from './config'
 
@@ -41,6 +43,18 @@ export function getObservationDetail(
   return Promise.resolve(localGetObservationDetail(obsId, viewerUserId))
 }
 
+export type { WithdrawObservationResult }
+
+export function withdrawObservation(
+  obsId: string,
+  userId: string,
+): Promise<WithdrawObservationResult> {
+  if (!USE_LOCAL_BACKEND) {
+    return Promise.reject(new Error('远程撤回观测 API 待实现'))
+  }
+  return Promise.resolve(localWithdrawObservation(obsId, userId))
+}
+
 export function createObservation(params: CreateObservationParams): Promise<ObservationFeedItem> {
   if (!USE_LOCAL_BACKEND) {
     return Promise.reject(new Error('远程创建观测 API 待实现'))
@@ -62,9 +76,10 @@ export function createObservationComment(
   obsId: string,
   userId: string,
   content: string,
+  replyToCommentId?: string,
 ): Promise<{ comment: ObservationCommentItem; comment_count: number } | { error: string }> {
   if (!USE_LOCAL_BACKEND) {
     return Promise.reject(new Error('远程评论 API 待实现'))
   }
-  return Promise.resolve(localCreateObservationComment(obsId, userId, content))
+  return Promise.resolve(localCreateObservationComment(obsId, userId, content, replyToCommentId))
 }

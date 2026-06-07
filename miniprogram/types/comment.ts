@@ -6,6 +6,10 @@ export interface ObservationComment {
   content: string
   created_at: string
   status: 'active' | 'deleted'
+  /** 被回复的评论 ID */
+  reply_to_comment_id?: string
+  /** 被回复的用户 ID */
+  reply_to_user_id?: string
 }
 
 /** 详情页评论展示项 */
@@ -16,4 +20,5 @@ export interface ObservationCommentItem {
   author_nickname: string
   author_avatar_url: string
   is_expert: boolean
+  reply_to_nickname?: string
 }

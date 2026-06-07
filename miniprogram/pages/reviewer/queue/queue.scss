@@ -1,0 +1,176 @@
+page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f9f0;
+}
+
+.page-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-bar {
+  flex-shrink: 0;
+  margin: 16rpx 24rpx 0;
+  padding: 20rpx 24rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 12rpx rgba(45, 90, 46, 0.06);
+}
+
+.summary-text {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #2d5a2e;
+  margin-bottom: 6rpx;
+}
+
+.summary-hint {
+  display: block;
+  font-size: 22rpx;
+  color: #9ab09b;
+}
+
+.scrollarea {
+  flex: 1;
+  min-height: 0;
+  padding: 16rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.loading,
+.empty,
+.forbidden {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 40rpx;
+  color: #9ab09b;
+  font-size: 28rpx;
+}
+
+.forbidden-icon,
+.empty-icon {
+  font-size: 72rpx;
+  margin-bottom: 20rpx;
+}
+
+.forbidden-title,
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #2d5a2e;
+  margin-bottom: 8rpx;
+}
+
+.forbidden-desc,
+.empty-desc {
+  font-size: 24rpx;
+  color: #9ab09b;
+}
+
+.queue-card {
+  display: flex;
+  padding: 16rpx;
+  margin-bottom: 12rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 12rpx rgba(45, 90, 46, 0.06);
+}
+
+.queue-thumb {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 8rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+  background: #eef5e8;
+}
+
+.queue-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.queue-note {
+  display: block;
+  font-size: 26rpx;
+  color: #333;
+  line-height: 1.5;
+  margin-bottom: 8rpx;
+  word-break: break-all;
+}
+
+.queue-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  margin-bottom: 10rpx;
+}
+
+.meta-text {
+  font-size: 22rpx;
+  color: #9ab09b;
+}
+
+.claim-row {
+  margin-bottom: 10rpx;
+}
+
+.claim-tag {
+  display: inline-block;
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+
+.claim-tag.mine {
+  color: #3a6ea5;
+  background: #e8f0fa;
+}
+
+.claim-tag.other {
+  color: #a67c00;
+  background: #fff8e8;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.action-btn {
+  padding: 8rpx 20rpx;
+  font-size: 22rpx;
+  border-radius: 8rpx;
+}
+
+.action-btn.claim {
+  color: #fff;
+  background: #4c8c4a;
+}
+
+.action-btn.release {
+  color: #a67c00;
+  background: #fff8e8;
+}
+
+.action-btn.identify {
+  color: #fff;
+  background: #3a6ea5;
+}
+
+.action-btn.link {
+  color: #3a6ea5;
+  background: #e8f0fa;
+}
+
+.action-btn:active {
+  opacity: 0.85;
+}

@@ -22,6 +22,7 @@ export function addObservationComment(
   obsId: string,
   userId: string,
   content: string,
+  replyTo?: { comment_id: string; user_id: string },
 ): ObservationComment {
   const comment: ObservationComment = {
     comment_id: generateCommentId(),
@@ -30,6 +31,8 @@ export function addObservationComment(
     content,
     created_at: new Date().toISOString(),
     status: 'active',
+    reply_to_comment_id: replyTo ? replyTo.comment_id : undefined,
+    reply_to_user_id: replyTo ? replyTo.user_id : undefined,
   }
 
   const all = getAllComments()

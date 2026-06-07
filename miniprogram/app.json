@@ -5,10 +5,13 @@
     "pages/index/index",
     "pages/map/map",
     "pages/publish/publish",
+    "pages/publish/select-location/select-location",
     "pages/detail/detail",
+    "pages/profile/profile",
     "pages/species/species",
     "pages/admin/users/users",
     "pages/admin/moderation/moderation",
+    "pages/reviewer/queue/queue",
     "pages/logs/logs"
   ],
   "window": {

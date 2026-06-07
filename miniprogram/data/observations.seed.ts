@@ -3,27 +3,41 @@
  * 迁移至云服务器后端后，可删除整个 data/ 目录
  */
 import type { Observation } from '../types/observation'
+import { getLocationByName } from './locations'
 
 const DEFAULT_PHOTO =
   'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRna42FI242Lcia07jQodd2FJGIYQfG0LAJGFxM4FbnQP6yfMxBgJ0F3YRqJCJ1aPAK2dQagdusBZg/0'
+
+function atLocation(name: string): Pick<Observation, 'location_name' | 'latitude' | 'longitude'> {
+  const point = getLocationByName(name)
+  if (!point) {
+    return { location_name: name }
+  }
+  return {
+    location_name: point.name,
+    latitude: point.latitude,
+    longitude: point.longitude,
+  }
+}
 
 export const SEED_OBSERVATIONS: Omit<Observation, 'obs_id'>[] = [
   {
     user_id: 'seed_3',
     species_name: '橘猫',
-    location_name: '二食堂东门',
-    note: '二食堂门口有只超乖的橘猫！',
+    ...atLocation('理科食堂'),
+    note: '理科食堂门口有只超乖的橘猫！',
     status: 'approved',
     submitted_at: '2026-06-05T10:30:00.000Z',
     photo_url: DEFAULT_PHOTO,
     like_count: 28,
     comment_count: 6,
+    is_featured: true,
   },
   {
     user_id: 'seed_3',
     species_name: '银杏',
-    location_name: '图书馆北侧',
-    note: '图书馆北侧银杏叶色很美，阳光洒下来特别好看。',
+    ...atLocation('图书馆'),
+    note: '图书馆旁银杏叶色很美，阳光洒下来特别好看。',
     status: 'approved',
     submitted_at: '2026-06-04T15:20:00.000Z',
     photo_url: DEFAULT_PHOTO,
@@ -33,8 +47,8 @@ export const SEED_OBSERVATIONS: Omit<Observation, 'obs_id'>[] = [
   {
     user_id: 'seed_3',
     species_name: '麻雀',
-    location_name: '三教楼顶',
-    note: '三教楼顶常见的小麻雀，不怕人。',
+    ...atLocation('公教楼C区'),
+    note: '公教楼C区常见的小麻雀，不怕人。',
     status: 'approved',
     submitted_at: '2026-06-03T08:45:00.000Z',
     photo_url: DEFAULT_PHOTO,
@@ -44,18 +58,19 @@ export const SEED_OBSERVATIONS: Omit<Observation, 'obs_id'>[] = [
   {
     user_id: 'seed_3',
     species_name: '樱花',
-    location_name: '樱花大道',
-    note: '樱花大道落英缤纷，春天真的太美了！',
+    ...atLocation('东北角湿地'),
+    note: '东北角湿地旁落英缤纷，春天真的太美了！',
     status: 'approved',
     submitted_at: '2026-06-02T12:00:00.000Z',
     photo_url: DEFAULT_PHOTO,
     like_count: 42,
     comment_count: 11,
+    is_featured: true,
   },
   {
     user_id: 'seed_3',
-    location_name: '田径场看台',
-    note: '看台边发现一只小鸟，有人认识吗？',
+    ...atLocation('体育馆'),
+    note: '体育馆边发现一只小鸟，有人认识吗？',
     status: 'needs_identification',
     submitted_at: '2026-06-01T17:30:00.000Z',
     photo_url: DEFAULT_PHOTO,
@@ -65,8 +80,8 @@ export const SEED_OBSERVATIONS: Omit<Observation, 'obs_id'>[] = [
   {
     user_id: 'seed_3',
     species_name: '桂花',
-    location_name: '校门口花坛',
-    note: '校门口花坛的桂花开了，整个空气都是香的，路过的时候忍不住多闻了几下。',
+    ...atLocation('计网学院楼'),
+    note: '计网学院楼旁的桂花开了，整个空气都是香的。',
     status: 'approved',
     submitted_at: '2026-05-31T09:15:00.000Z',
     photo_url: DEFAULT_PHOTO,
@@ -76,8 +91,8 @@ export const SEED_OBSERVATIONS: Omit<Observation, 'obs_id'>[] = [
   {
     user_id: 'seed_3',
     species_name: '喜鹊',
-    location_name: '行政楼前广场',
-    note: '行政楼前的喜鹊在草地上找吃的，尾巴长长的很漂亮。',
+    ...atLocation('理科学9'),
+    note: '理科学9前的喜鹊在草地上找吃的，尾巴长长的很漂亮。',
     status: 'identified',
     submitted_at: '2026-05-30T14:40:00.000Z',
     photo_url: DEFAULT_PHOTO,
@@ -87,8 +102,8 @@ export const SEED_OBSERVATIONS: Omit<Observation, 'obs_id'>[] = [
   {
     user_id: 'seed_3',
     species_name: '竹子',
-    location_name: '竹林小径',
-    note: '竹林小径旁的竹子绿油油的，风吹过沙沙作响。',
+    ...atLocation('公教楼C区'),
+    note: '公教楼C区旁的竹子绿油油的，风吹过沙沙作响。',
     status: 'approved',
     submitted_at: '2026-05-29T11:20:00.000Z',
     photo_url: DEFAULT_PHOTO,
@@ -98,8 +113,8 @@ export const SEED_OBSERVATIONS: Omit<Observation, 'obs_id'>[] = [
   {
     user_id: 'seed_3',
     species_name: '蝴蝶',
-    location_name: '植物园温室',
-    note: '温室门口有只白色蝴蝶停在花朵上，翅膀上的花纹很精致。',
+    ...atLocation('理科体育场'),
+    note: '理科体育场边有只白色蝴蝶停在草丛上，翅膀上的花纹很精致。',
     status: 'approved',
     submitted_at: '2026-05-28T16:00:00.000Z',
     photo_url: DEFAULT_PHOTO,
@@ -109,8 +124,8 @@ export const SEED_OBSERVATIONS: Omit<Observation, 'obs_id'>[] = [
   {
     user_id: 'seed_3',
     species_name: '锦鲤',
-    location_name: '荷花池',
-    note: '荷花池里的锦鲤游来游去，红色的那条最抢眼。',
+    ...atLocation('东北角湿地'),
+    note: '东北角湿地的锦鲤游来游去，红色的那条最抢眼。',
     status: 'approved',
     submitted_at: '2026-05-27T10:10:00.000Z',
     photo_url: DEFAULT_PHOTO,

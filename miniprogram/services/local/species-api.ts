@@ -8,7 +8,8 @@ function getArchivableObservations() {
       obs.species_name &&
       obs.species_name.trim() &&
       obs.status !== 'rejected' &&
-      obs.status !== 'pending_review',
+      obs.status !== 'pending_review' &&
+      obs.status !== 'withdrawn',
   )
 }
 

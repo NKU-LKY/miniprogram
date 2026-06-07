@@ -38,6 +38,25 @@ export function findNearestCampusLocation(coord: GeoCoordinate): CampusLocation 
   return nearest
 }
 
+/** 将地图坐标格式化为可读的地点描述 */
+export function formatMapAddress(coord: GeoCoordinate): string {
+  const lat = Math.abs(coord.latitude).toFixed(4)
+  const lng = Math.abs(coord.longitude).toFixed(4)
+  const latPrefix = coord.latitude >= 0 ? '北纬' : '南纬'
+  const lngPrefix = coord.longitude >= 0 ? '东经' : '西经'
+  return `${latPrefix}${lat}°，${lngPrefix}${lng}°`
+}
+
+export function hasValidCoordinate(coord?: GeoCoordinate | null): coord is GeoCoordinate {
+  return (
+    coord != null &&
+    typeof coord.latitude === 'number' &&
+    typeof coord.longitude === 'number' &&
+    !Number.isNaN(coord.latitude) &&
+    !Number.isNaN(coord.longitude)
+  )
+}
+
 export function getDeviceLocation(): Promise<GeoCoordinate> {
   return new Promise((resolve, reject) => {
     wx.getLocation({

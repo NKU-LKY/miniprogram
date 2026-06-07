@@ -22,6 +22,15 @@
   border-color: #b8d4b8;
 }
 
+.filter-chip.featured.active {
+  background: #fff8e8;
+  border-color: #e8d4a0;
+}
+
+.filter-chip.featured.active .filter-label {
+  color: #a67c00;
+}
+
 .filter-label {
   flex: 1;
   min-width: 0;

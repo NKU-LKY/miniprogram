@@ -25,5 +25,12 @@
     </view>
   </picker>
 
+  <view
+    class="filter-chip featured {{featuredOnly ? 'active' : ''}}"
+    bindtap="onFeaturedToggle"
+  >
+    <text class="filter-label">⭐ 精选</text>
+  </view>
+
   <view class="filter-reset" wx:if="{{showReset}}" bindtap="onReset">重置</view>
 </view>

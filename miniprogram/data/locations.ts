@@ -6,28 +6,43 @@ export interface CampusLocation {
 }
 
 export const CAMPUS_LOCATION_POINTS: CampusLocation[] = [
-  { name: '二食堂东门', latitude: 38.9912, longitude: 117.3516 },
-  { name: '图书馆北侧', latitude: 38.9920, longitude: 117.3502 },
-  { name: '三教楼顶', latitude: 38.9903, longitude: 117.3524 },
-  { name: '樱花大道', latitude: 38.9926, longitude: 117.3531 },
-  { name: '田径场看台', latitude: 38.9892, longitude: 117.3495 },
-  { name: '校门口花坛', latitude: 38.9935, longitude: 117.3488 },
-  { name: '行政楼前广场', latitude: 38.9914, longitude: 117.3490 },
-  { name: '竹林小径', latitude: 38.9899, longitude: 117.3540 },
-  { name: '植物园温室', latitude: 38.9883, longitude: 117.3528 },
-  { name: '荷花池', latitude: 38.9886, longitude: 117.3508 },
+  { name: '理科学9', latitude: 38.9839, longitude: 117.3421 },
+  { name: '图书馆', latitude: 38.9864, longitude: 117.3470 },
+  { name: '计网学院楼', latitude: 38.9866, longitude: 117.3422 },
+  { name: '公教楼C区', latitude: 38.9888, longitude: 117.3457 },
+  { name: '东北角湿地', latitude: 38.9907, longitude: 117.3545 },
+  { name: '理科体育场', latitude: 38.9855, longitude: 117.3391 },
+  { name: '理科食堂', latitude: 38.9860, longitude: 117.3412 },
+  { name: '体育馆', latitude: 38.9914, longitude: 117.3476 },
 ]
 
 export const CAMPUS_LOCATIONS = CAMPUS_LOCATION_POINTS.map((item) => item.name)
 
 /** 校园地图默认中心与缩放级别 */
 export const CAMPUS_MAP_CENTER = {
-  latitude: 38.99,
-  longitude: 117.35,
+  latitude: 38.9874,
+  longitude: 117.3449,
 }
 
 export const CAMPUS_MAP_SCALE = 15
 
 export function getLocationByName(name: string): CampusLocation | undefined {
   return CAMPUS_LOCATION_POINTS.find((item) => item.name === name)
+}
+
+/** 解析观测记录坐标：优先使用地图选点，否则回退到预设地点 */
+export function resolveObservationCoordinate(obs: {
+  location_name: string
+  latitude?: number
+  longitude?: number
+}): CampusLocation | null {
+  if (typeof obs.latitude === 'number' && typeof obs.longitude === 'number') {
+    return {
+      name: obs.location_name,
+      latitude: obs.latitude,
+      longitude: obs.longitude,
+    }
+  }
+  const preset = getLocationByName(obs.location_name)
+  return preset || null
 }

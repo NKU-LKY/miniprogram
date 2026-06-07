@@ -1,0 +1,212 @@
+<navigation-bar extClass="nav-bar-slot" title="个人中心" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<scroll-view class="page" scroll-y type="list">
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="unavailable" wx:elif="{{unavailable}}">
+    <text class="unavailable-icon">😕</text>
+    <text class="unavailable-title">无法加载个人信息</text>
+  </view>
+
+  <block wx:else>
+    <view class="profile-header">
+      <image class="profile-avatar" src="{{avatarUrl}}" mode="aspectFill"></image>
+      <view class="profile-meta">
+        <text class="profile-name">{{nickname}}</text>
+        <text class="profile-role">{{roleLabel}}</text>
+      </view>
+    </view>
+
+    <view class="stats-row">
+      <view class="stat-item">
+        <text class="stat-value">{{shareCount}}</text>
+        <text class="stat-label">已分享</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{totalLikes}}</text>
+        <text class="stat-label">总点赞</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{speciesCount}}</text>
+        <text class="stat-label">图鉴种类</text>
+      </view>
+    </view>
+
+    <view class="section diary-section">
+      <text class="section-title">观测日记</text>
+      <text class="diary-summary">
+        近 6 个月共发布 {{diaryTotalRecords}} 条 · 活跃 {{diaryActiveDays}} 天
+      </text>
+
+      <scroll-view
+        class="diary-scroll"
+        scroll-x
+        enable-flex
+        show-scrollbar="{{false}}"
+        scroll-into-view="{{diaryScrollIntoView}}"
+        scroll-with-animation="{{false}}"
+      >
+        <view class="diary-chart" style="width: {{diaryChartWidth}}rpx;">
+          <view class="diary-month-row">
+            <view class="diary-weekday-spacer"></view>
+            <view class="diary-month-track">
+              <text
+                class="diary-month-label"
+                wx:for="{{diaryMonthLabels}}"
+                wx:key="week_index"
+                style="left: {{item.week_index * 26}}rpx;"
+              >{{item.label}}</text>
+            </view>
+          </view>
+
+          <view class="diary-body">
+            <view class="diary-weekdays">
+              <text
+                class="diary-weekday"
+                wx:for="{{diaryWeekdayLabels}}"
+                wx:key="*this"
+              >{{item}}</text>
+            </view>
+
+            <view class="diary-weeks">
+              <view
+                class="diary-week-col"
+                wx:for="{{diaryWeeks}}"
+                wx:key="week_index"
+                id="diary-week-{{item.week_index}}"
+              >
+                <view
+                  class="diary-cell level-{{cell.level}} {{cell.future ? 'future' : ''}}"
+                  wx:for="{{item.days}}"
+                  wx:for-item="cell"
+                  wx:key="date"
+                  data-date="{{cell.date}}"
+                  data-count="{{cell.count}}"
+                  data-future="{{cell.future}}"
+                  bindtap="onDiaryCellTap"
+                ></view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+
+      <view class="diary-legend">
+        <text class="legend-text">少</text>
+        <view class="legend-cell level-0"></view>
+        <view class="legend-cell level-1"></view>
+        <view class="legend-cell level-2"></view>
+        <view class="legend-cell level-3"></view>
+        <view class="legend-cell level-4"></view>
+        <text class="legend-text">多</text>
+      </view>
+    </view>
+
+    <view class="section notification-section">
+      <view class="section-header">
+        <view class="section-title-row">
+          <text class="section-title">消息通知</text>
+          <view class="unread-badge" wx:if="{{unreadCount > 0}}">{{unreadCount}}</view>
+        </view>
+        <view class="notification-actions" wx:if="{{notifications.length > 0}}">
+          <text
+            class="notification-action-btn {{unreadCount > 0 ? '' : 'disabled'}}"
+            bindtap="onMarkAllNotificationsRead"
+          >一键已读</text>
+          <text class="notification-action-divider">|</text>
+          <text class="notification-action-btn danger" bindtap="onClearAllNotifications">一键清空</text>
+        </view>
+      </view>
+
+      <view
+        class="notification-item {{item.is_read ? '' : 'unread'}}"
+        wx:for="{{notifications}}"
+        wx:key="notification_id"
+        data-id="{{item.notification_id}}"
+        data-obs-id="{{item.obs_id}}"
+        data-type="{{item.type}}"
+        bindtap="onNotificationTap"
+      >
+        <view class="notification-icon">{{item.type_icon}}</view>
+        <view class="notification-body">
+          <view class="notification-top">
+            <text class="notification-type">{{item.type_label}}</text>
+            <text class="notification-time">{{item.time_text}}</text>
+          </view>
+          <text class="notification-title">{{item.title}}</text>
+          <text class="notification-content">{{item.content}}</text>
+        </view>
+        <view class="notification-dot" wx:if="{{!item.is_read}}"></view>
+      </view>
+
+      <view class="empty-block compact" wx:if="{{notifications.length === 0}}">
+        <text class="empty-icon">🔔</text>
+        <text class="empty-title">暂无新消息</text>
+        <text class="empty-desc">鉴定结果与评论互动会在这里提醒你</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">我的分享</text>
+
+      <view
+        class="record-card"
+        wx:for="{{records}}"
+        wx:key="obs_id"
+        data-id="{{item.obs_id}}"
+        bindtap="onCardTap"
+      >
+        <image class="record-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
+        <view class="featured-badge" wx:if="{{item.is_featured}}">⭐ 精选</view>
+        <view class="record-body">
+          <view class="record-top">
+            <text class="status-tag" wx:if="{{item.status_label}}">{{item.status_label}}</text>
+            <text class="record-time">{{item.time_text}}</text>
+          </view>
+          <text class="record-note">{{item.note || '暂无描述'}}</text>
+          <view class="record-bottom">
+            <text class="record-location">📍 {{item.location_name}}</text>
+            <text class="record-species" wx:if="{{item.species_name}}">· {{item.species_name}}</text>
+          </view>
+          <view class="record-stats">
+            <text class="stat-text">♥ {{item.like_count}}</text>
+            <text class="stat-text">💬 {{item.comment_count}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="empty-block" wx:if="{{records.length === 0}}">
+        <text class="empty-icon">📷</text>
+        <text class="empty-title">你还没有分享过观测记录</text>
+        <text class="empty-desc">发布第一条发现，解锁你的校园图鉴</text>
+        <button wx:if="{{isObserver}}" class="empty-btn" bindtap="onGoPublish">去发布</button>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">我的物种图鉴</text>
+
+      <view class="species-grid" wx:if="{{speciesList.length > 0}}">
+        <view
+          class="species-item"
+          wx:for="{{speciesList}}"
+          wx:key="species_name"
+          data-name="{{item.species_name}}"
+          bindtap="onSpeciesTap"
+        >
+          <text class="species-icon">{{item.marker_label}}</text>
+          <text class="species-name">{{item.species_name}}</text>
+          <text class="species-count">{{item.record_count}} 条 · {{item.latest_time_text}}</text>
+        </view>
+      </view>
+
+      <view class="empty-block" wx:else>
+        <text class="empty-icon">📚</text>
+        <text class="empty-title">还没有解锁物种图鉴</text>
+        <text class="empty-desc">上传带物种标注的观测记录后会自动收录</text>
+      </view>
+    </view>
+  </block>
+</scroll-view>
