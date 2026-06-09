@@ -1,14 +1,18 @@
+import { getSpeciesCategory } from '../data/species-categories'
 import type { MapLocationGroup } from '../types/observation'
 
-/** 根据物种名称推断地图标记图标 */
-export function getSpeciesMarkerLabel(speciesName?: string): string {
-  const name = (speciesName || '').trim()
+/** 根据物种类别（大类）返回地图标记图标 */
+export function getSpeciesMarkerLabel(categoryName?: string): string {
+  const category = getSpeciesCategory(categoryName)
+  if (category) return category.marker_label
+
+  const name = (categoryName || '').trim()
   if (!name) return '❓'
 
-  if (/猫|狗|鼠|兔|松鼠|刺猬/.test(name)) return '🐾'
+  if (/猫|狗|鼠|兔|松鼠|刺猬|哺乳/.test(name)) return '🐾'
   if (/鸟|雀|鹊|鹰|鸭|鹅|鸽/.test(name)) return '🐦'
   if (/鱼|鲤|鲫/.test(name)) return '🐟'
-  if (/蝶|蛾|蜂|虫|蜻蜓|瓢虫/.test(name)) return '🦋'
+  if (/蝶|蛾|蜂|虫|蜻蜓|瓢虫|昆虫/.test(name)) return '🦋'
   if (/花|树|竹|樱|桂|银杏|荷|草|叶|松|梅|藤|蕨|植物|温室/.test(name)) return '🌿'
 
   return '📍'

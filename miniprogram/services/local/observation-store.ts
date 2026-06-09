@@ -1,17 +1,26 @@
+import { isValidSpeciesCategory } from '../../data/species-categories'
 import { SEED_OBSERVATIONS } from '../../data/observations.seed'
 import { getLocationByName } from '../../data/locations'
 import type { Observation } from '../../types/observation'
+import { migrateObservationSpecies } from '../../utils/species-migration'
 import { getLocalItem, setLocalItem } from './storage'
 
 const OBSERVATIONS_KEY = 'observations'
 const SEED_VERSION_KEY = 'observations_seed_version'
-const CURRENT_SEED_VERSION = 3
+const SPECIES_MIGRATION_KEY = 'observations_species_migration_version'
+const CURRENT_SEED_VERSION = 5
+const CURRENT_SPECIES_MIGRATION_VERSION = 1
+
+function hasLegacySpeciesLabel(obs: Observation): boolean {
+  const name = (obs.species_name || '').trim()
+  return Boolean(name && !isValidSpeciesCategory(name))
+}
 
 function normalizeObservation(obs: Observation): Observation {
-  return {
+  return migrateObservationSpecies({
     ...obs,
     comments_enabled: obs.comments_enabled !== false,
-  }
+  })
 }
 
 function repairObservationLocation(obs: Observation): Observation {
@@ -89,12 +98,22 @@ export function getAllObservations(): Observation[] {
   }
 
   const seedOutdated = seedVersion !== CURRENT_SEED_VERSION
+  const speciesMigrationOutdated =
+    getLocalItem<number>(SPECIES_MIGRATION_KEY) !== CURRENT_SPECIES_MIGRATION_VERSION
+  const hasLegacySpecies = stored.some(hasLegacySpeciesLabel)
   const merged = mergeSeedIntoStored(stored, seed, seedOutdated)
   const storedIds = new Set(stored.map((obs) => obs.obs_id))
   const hasMissingSeed = seed.some((obs) => !storedIds.has(obs.obs_id))
 
-  if (hasMissingSeed || merged.length !== stored.length || seedOutdated) {
+  if (
+    hasMissingSeed ||
+    merged.length !== stored.length ||
+    seedOutdated ||
+    speciesMigrationOutdated ||
+    hasLegacySpecies
+  ) {
     setLocalItem(SEED_VERSION_KEY, CURRENT_SEED_VERSION)
+    setLocalItem(SPECIES_MIGRATION_KEY, CURRENT_SPECIES_MIGRATION_VERSION)
     return saveObservations(merged)
   }
 
@@ -132,6 +151,7 @@ export function updateObservation(
       | 'comment_count'
       | 'status'
       | 'species_name'
+      | 'species_remark'
       | 'reviewer_id'
       | 'claimed_at'
       | 'identified_at'

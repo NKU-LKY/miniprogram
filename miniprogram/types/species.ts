@@ -38,6 +38,7 @@ export interface SpeciesRelatedRecord {
   obs_id: string
   photo_url: string
   note: string
+  species_remark?: string
   location_name: string
   time_text: string
   like_count: number

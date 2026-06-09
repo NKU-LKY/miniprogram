@@ -1,5 +1,6 @@
 import { CAMPUS_LOCATIONS } from '../data/locations'
-import { SEED_SPECIES_NAMES } from '../data/observations.seed'
+import { SPECIES_CATEGORY_NAMES } from '../data/species-categories'
+import { SEED_CATEGORY_NAMES } from '../data/observations.seed'
 import { normalizeMapLocation } from './map-locations'
 
 export interface FilterOption {
@@ -39,6 +40,7 @@ const TIME_RANGE_DAYS: { [key: string]: number } = {
 
 interface FilterableObservation {
   species_name?: string
+  species_remark?: string
   location_name: string
   location_detail?: string
   note?: string
@@ -51,10 +53,11 @@ function getSpeciesName(obs: FilterableObservation): string {
   return obs.species_name ? obs.species_name.trim() : ''
 }
 
-const SEED_SPECIES_SET = new Set(SEED_SPECIES_NAMES)
+const SEED_CATEGORY_SET = new Set(SEED_CATEGORY_NAMES)
+const ALL_CATEGORY_SET = new Set(SPECIES_CATEGORY_NAMES)
 
 export function collectSpeciesOptions(observations: FilterableObservation[]): FilterOption[] {
-  const options: FilterOption[] = [{ label: '全部物种', value: '' }]
+  const options: FilterOption[] = [{ label: '全部类别', value: '' }]
   const nameMap: { [key: string]: boolean } = {}
   let hasUnidentified = false
 
@@ -129,7 +132,7 @@ function matchesSpecies(obs: FilterableObservation, species?: string): boolean {
   const speciesName = getSpeciesName(obs)
   if (species === SPECIES_UNIDENTIFIED_VALUE) return !speciesName
   if (species === SPECIES_OTHER_VALUE) {
-    return Boolean(speciesName) && !SEED_SPECIES_SET.has(speciesName)
+    return Boolean(speciesName) && !SEED_CATEGORY_SET.has(speciesName) && ALL_CATEGORY_SET.has(speciesName)
   }
   return speciesName === species
 }
@@ -159,7 +162,7 @@ function matchesKeyword(obs: FilterableObservation, keyword?: string): boolean {
   const query = keyword.trim().toLowerCase()
   if (!query) return true
 
-  const fields = [obs.note, obs.species_name, obs.location_name, obs.location_detail]
+  const fields = [obs.note, obs.species_name, obs.species_remark, obs.location_name, obs.location_detail]
   for (let i = 0; i < fields.length; i++) {
     const value = fields[i]
     if (value && value.toLowerCase().includes(query)) return true

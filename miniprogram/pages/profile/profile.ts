@@ -32,6 +32,7 @@ interface RecordView {
   note: string
   location_name: string
   species_name: string
+  species_label: string
   status_label: string
   time_text: string
   like_count: number
@@ -126,6 +127,7 @@ Page({
           note: item.note || '',
           location_name: item.location_name,
           species_name: item.species_name || '',
+          species_label: item.species_label || item.species_name || '',
           status_label: item.status_label || '',
           time_text: item.time_text,
           like_count: item.like_count,

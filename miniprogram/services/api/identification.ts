@@ -43,13 +43,16 @@ export function releaseIdentification(obsId: string, reviewerId: string): Promis
 export function completeIdentification(
   obsId: string,
   reviewerId: string,
-  speciesName: string,
+  categoryName: string,
+  speciesRemark?: string,
   reviewNote?: string,
 ): Promise<IdentificationResult> {
   if (!USE_LOCAL_BACKEND) {
     return Promise.reject(new Error('远程完成鉴定 API 待实现'))
   }
-  return Promise.resolve(localCompleteIdentification(obsId, reviewerId, speciesName, reviewNote))
+  return Promise.resolve(
+    localCompleteIdentification(obsId, reviewerId, categoryName, speciesRemark, reviewNote),
+  )
 }
 
 export function getIdentificationState(

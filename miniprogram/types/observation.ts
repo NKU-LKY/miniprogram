@@ -13,7 +13,10 @@ export type ObservationStatus =
 export interface Observation {
   obs_id: string
   user_id: string
+  /** 物种类别（大类），如「鸟类」 */
   species_name?: string
+  /** 物种备注，填写具体物种信息，如「喜鹊、麻雀」 */
+  species_remark?: string
   location_name: string
   /** 用户补充的详细地址备注（选填） */
   location_detail?: string
@@ -49,6 +52,9 @@ export interface ObservationFeedItem {
   location_name: string
   location_detail?: string
   species_name?: string
+  species_remark?: string
+  /** 列表展示用，如「鸟类（喜鹊）」 */
+  species_label?: string
   status: ObservationStatus
   status_label?: string
   submitted_at: string
@@ -87,6 +93,7 @@ export interface CreateObservationParams {
   longitude?: number
   note?: string
   species_name?: string
+  species_remark?: string
   needs_identification: boolean
 }
 
@@ -97,6 +104,8 @@ export interface MapObservationItem {
   note: string
   location_name: string
   species_name?: string
+  species_remark?: string
+  species_label?: string
   latitude: number
   longitude: number
   /** 地图聚合用的地点键（预设地标名或独立坐标） */

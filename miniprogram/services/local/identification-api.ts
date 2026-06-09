@@ -1,4 +1,6 @@
+import { isValidSpeciesCategory } from '../../data/species-categories'
 import type { Observation } from '../../types/observation'
+import { formatSpeciesLabel } from '../../utils/species-display'
 import { formatRelativeTime } from '../../utils/time'
 import { createNotification } from './notification-store'
 import { getAllObservations, updateObservation } from './observation-store'
@@ -9,6 +11,9 @@ export interface IdentificationQueueItem {
   photo_url: string
   note: string
   location_name: string
+  species_name?: string
+  species_remark?: string
+  species_label?: string
   submitted_at: string
   time_text: string
   publisher_nickname: string
@@ -33,12 +38,16 @@ function toQueueItem(obs: Observation, currentReviewerId: string): Identificatio
   const reviewer = obs.reviewer_id ? findUserById(obs.reviewer_id) : undefined
   const isClaimedByMe = Boolean(obs.reviewer_id && obs.reviewer_id === currentReviewerId)
   const isClaimedByOther = Boolean(obs.reviewer_id && obs.reviewer_id !== currentReviewerId)
+  const speciesLabel = formatSpeciesLabel(obs.species_name, obs.species_remark)
 
   return {
     obs_id: obs.obs_id,
     photo_url: obs.photo_url,
     note: obs.note,
     location_name: obs.location_name,
+    species_name: obs.species_name,
+    species_remark: obs.species_remark,
+    species_label: speciesLabel || undefined,
     submitted_at: obs.submitted_at,
     time_text: formatRelativeTime(obs.submitted_at),
     publisher_nickname: (publisher && publisher.nickname) || '小林同学',
@@ -71,17 +80,17 @@ function findPendingObservation(obsId: string): Observation | null {
 function sendIdentificationNotification(
   observation: Observation,
   reviewerId: string,
-  speciesName: string,
   reviewNote?: string,
 ): void {
   if (observation.user_id === reviewerId) return
 
-  const noteSuffix = reviewNote ? `，备注：${reviewNote}` : ''
+  const speciesLabel = formatSpeciesLabel(observation.species_name, observation.species_remark) || '未标注'
+  const noteSuffix = reviewNote ? `，鉴定说明：${reviewNote}` : ''
   createNotification({
     user_id: observation.user_id,
     type: 'identification_result',
     title: '鉴定完成',
-    content: `你提交的观测记录已被鉴定为「${speciesName}」${noteSuffix}`,
+    content: `你提交的观测记录已被鉴定为「${speciesLabel}」${noteSuffix}`,
     obs_id: observation.obs_id,
     actor_user_id: reviewerId,
   })
@@ -151,12 +160,16 @@ export function releaseIdentification(obsId: string, reviewerId: string): Identi
 export function completeIdentification(
   obsId: string,
   reviewerId: string,
-  speciesName: string,
+  categoryName: string,
+  speciesRemark?: string,
   reviewNote?: string,
 ): IdentificationResult {
-  const trimmedSpecies = speciesName.trim()
-  if (!trimmedSpecies) {
-    return { success: false, message: '请填写鉴定物种名称' }
+  const trimmedCategory = categoryName.trim()
+  if (!trimmedCategory) {
+    return { success: false, message: '请选择物种类别' }
+  }
+  if (!isValidSpeciesCategory(trimmedCategory)) {
+    return { success: false, message: '请选择有效的物种类别' }
   }
 
   const obs = findObservationById(obsId)
@@ -179,7 +192,8 @@ export function completeIdentification(
 
   const now = new Date().toISOString()
   const patch: Partial<Observation> = {
-    species_name: trimmedSpecies,
+    species_name: trimmedCategory,
+    species_remark: speciesRemark ? speciesRemark.trim() || undefined : undefined,
     status: 'identified',
     identified_at: now,
     review_note: reviewNote ? reviewNote.trim() || undefined : undefined,
@@ -199,7 +213,6 @@ export function completeIdentification(
     sendIdentificationNotification(
       updated,
       reviewerId,
-      trimmedSpecies,
       reviewNote ? reviewNote.trim() || undefined : undefined,
     )
   } catch (err) {
@@ -220,6 +233,8 @@ export function getIdentificationState(
   claimed_by_other: boolean
   reviewer_nickname?: string
   review_note?: string
+  species_name?: string
+  species_remark?: string
 } | null {
   const obs = findPendingObservation(obsId)
   if (!obs) return null
@@ -236,5 +251,7 @@ export function getIdentificationState(
     claimed_by_other: claimedByOther,
     reviewer_nickname: reviewer ? reviewer.nickname : undefined,
     review_note: obs.review_note,
+    species_name: obs.species_name,
+    species_remark: obs.species_remark,
   }
 }

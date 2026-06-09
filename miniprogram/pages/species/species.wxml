@@ -1,4 +1,4 @@
-<navigation-bar title="物种档案" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+<navigation-bar title="类别档案" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
 
 <scroll-view class="page" scroll-y type="list">
   <view class="loading" wx:if="{{loading}}">
@@ -7,8 +7,8 @@
 
   <view class="unavailable" wx:elif="{{unavailable}}">
     <text class="unavailable-icon">🌿</text>
-    <text class="unavailable-title">暂无该物种档案</text>
-    <text class="unavailable-desc">可能还没有带物种标注的观测记录</text>
+    <text class="unavailable-title">暂无该类别档案</text>
+    <text class="unavailable-desc">可能还没有选择物种类别的观测记录</text>
   </view>
 
   <block wx:elif="{{detail}}">
@@ -75,6 +75,7 @@
       >
         <image class="record-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
         <view class="record-body">
+          <text class="record-note" wx:if="{{item.species_remark}}">{{item.species_remark}}</text>
           <text class="record-note">{{item.note}}</text>
           <view class="record-meta">
             <text class="record-location">📍 {{item.location_name}}</text>

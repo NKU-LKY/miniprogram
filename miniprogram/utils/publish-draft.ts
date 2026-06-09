@@ -9,7 +9,9 @@ export interface PublishDraft {
   latitude: number
   longitude: number
   hasLocation: boolean
-  speciesName: string
+  speciesCategoryName: string
+  speciesCategoryIndex: number
+  speciesRemark: string
   needsIdentification: boolean
   updatedAt: string
 }

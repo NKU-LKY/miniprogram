@@ -58,13 +58,33 @@
     </view>
 
     <view class="field">
-      <text class="field-label">物种名称（选填）</text>
+      <text class="field-label">物种类别（选填）</text>
+      <picker
+        mode="selector"
+        range="{{speciesCategories}}"
+        range-key="name"
+        value="{{speciesCategoryIndex >= 0 ? speciesCategoryIndex : 0}}"
+        bindchange="onSpeciesCategoryChange"
+      >
+        <view class="picker-display">
+          <text wx:if="{{speciesCategoryName}}" class="picker-value">{{speciesCategoryName}}</text>
+          <text wx:else class="picker-placeholder">选择大类，如：鸟类</text>
+          <text class="picker-arrow">›</text>
+        </view>
+      </picker>
+      <view class="picker-clear" wx:if="{{speciesCategoryName}}" bindtap="onClearSpeciesCategory">
+        <text>清除类别</text>
+      </view>
+    </view>
+
+    <view class="field" wx:if="{{speciesCategoryName || needsIdentification}}">
+      <text class="field-label">物种备注（选填）</text>
       <input
         class="field-input"
-        placeholder="{{needsIdentification ? '初步猜测，如：橘猫' : '如：橘猫、银杏'}}"
-        maxlength="20"
-        value="{{speciesName}}"
-        bindinput="onSpeciesInput"
+        placeholder="填写具体物种信息，如：喜鹊、麻雀"
+        maxlength="30"
+        value="{{speciesRemark}}"
+        bindinput="onSpeciesRemarkInput"
       />
     </view>
 

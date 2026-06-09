@@ -11,6 +11,7 @@ import type { FilterOption, ObservationFilterParams } from '../../utils/observat
 import { applyObservationFilter, collectLocationOptions, collectSpeciesOptions } from '../../utils/observation-filter'
 import { getSpeciesMarkerLabel } from '../../utils/map-markers'
 import { normalizeMapLocation } from '../../utils/map-locations'
+import { formatIdentifiedStatusLabel, formatSpeciesLabel } from '../../utils/species-display'
 import { formatFullTime, formatRelativeTime } from '../../utils/time'
 import { isObservationLiked, listObservationCommentThreads } from './interaction-api'
 import { isObservationFeatured, setObservationFeatured } from './featured-store'
@@ -37,9 +38,11 @@ function toFeedItem(obs: Observation): ObservationFeedItem {
   const statusLabel = STATUS_LABELS[obs.status]
   let displayStatusLabel = statusLabel
 
-  if (obs.status === 'identified' && obs.species_name) {
-    displayStatusLabel = `已鉴定·${obs.species_name}`
+  if (obs.status === 'identified') {
+    displayStatusLabel = formatIdentifiedStatusLabel(obs.species_name, obs.species_remark)
   }
+
+  const speciesLabel = formatSpeciesLabel(obs.species_name, obs.species_remark)
 
   return {
     obs_id: obs.obs_id,
@@ -48,6 +51,8 @@ function toFeedItem(obs: Observation): ObservationFeedItem {
     location_name: obs.location_name,
     location_detail: obs.location_detail,
     species_name: obs.species_name,
+    species_remark: obs.species_remark,
+    species_label: speciesLabel || undefined,
     status: obs.status,
     status_label: displayStatusLabel,
     submitted_at: obs.submitted_at,
@@ -198,12 +203,16 @@ export function listMapObservations(filter?: ObservationFilterParams): MapObserv
       const normalized = normalizeMapLocation(obs)
       if (!normalized) return null
 
+      const speciesLabel = formatSpeciesLabel(obs.species_name, obs.species_remark)
+
       return {
         obs_id: obs.obs_id,
         photo_url: obs.photo_url,
         note: obs.note,
         location_name: normalized.location_name,
         species_name: obs.species_name,
+        species_remark: obs.species_remark,
+        species_label: speciesLabel || undefined,
         latitude: normalized.latitude,
         longitude: normalized.longitude,
         location_key: normalized.location_key,
@@ -217,6 +226,7 @@ export function listMapObservations(filter?: ObservationFilterParams): MapObserv
 
 export function createObservation(params: CreateObservationParams): ObservationFeedItem {
   const speciesName = (params.species_name && params.species_name.trim()) || undefined
+  const speciesRemark = (params.species_remark && params.species_remark.trim()) || undefined
   const observation = addObservation({
     user_id: params.user_id,
     photo_url: params.photo_url,
@@ -226,6 +236,7 @@ export function createObservation(params: CreateObservationParams): ObservationF
     longitude: params.longitude,
     note: (params.note && params.note.trim()) || '',
     species_name: speciesName,
+    species_remark: speciesRemark,
     status: resolveStatus(params),
   })
 

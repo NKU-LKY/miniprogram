@@ -59,7 +59,7 @@
           class="tab-item {{activeTab === 'species' ? 'active' : ''}}"
           data-tab="species"
           bindtap="onTabChange"
-        >物种档案</view>
+        >类别档案</view>
       </view>
     </view>
   </view>
@@ -123,7 +123,7 @@
           <view class="obs-bottom">
             <view class="obs-location">
               <text class="location-text">📍 {{item.location_name}}</text>
-              <text class="species-text" wx:if="{{item.species_name}}">· {{item.species_name}}</text>
+              <text class="species-text" wx:if="{{item.species_label}}">· {{item.species_label}}</text>
             </view>
             <view class="obs-stats">
               <text class="stat-item">♥ {{item.like_count}}</text>
@@ -171,7 +171,7 @@
           <view class="obs-bottom">
             <view class="obs-location">
               <text class="location-text">📍 {{item.location_name}}</text>
-              <text class="species-text" wx:if="{{item.species_name}}">· {{item.species_name}}</text>
+              <text class="species-text" wx:if="{{item.species_label}}">· {{item.species_label}}</text>
             </view>
             <view class="obs-stats">
               <text class="stat-item">♥ {{item.like_count}}</text>
@@ -246,8 +246,8 @@
 
       <view class="empty" wx:if="{{!speciesLoading && speciesList.length === 0}}">
         <text class="empty-icon">📚</text>
-        <text class="empty-title">还没有可汇总的物种档案</text>
-        <text class="empty-desc">上传带物种标注的观测记录后会自动生成</text>
+        <text class="empty-title">还没有可汇总的类别档案</text>
+        <text class="empty-desc">上传并选择物种类别的观测记录后，将按大类自动生成档案</text>
         <button wx:if="{{isObserver}}" class="empty-btn" bindtap="onGoPublish">上传观测记录</button>
       </view>
     </block>

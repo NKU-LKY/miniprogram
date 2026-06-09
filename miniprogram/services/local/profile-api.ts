@@ -3,6 +3,7 @@ import type { SpeciesArchiveSummary } from '../../types/species'
 import { ROLE_LABELS } from '../../types/user'
 import { buildObservationDiary, type ObservationDiary } from '../../utils/observation-diary'
 import { buildSpeciesArchiveSummaries } from '../../utils/species-archive'
+import { formatIdentifiedStatusLabel, formatSpeciesLabel } from '../../utils/species-display'
 import { formatRelativeTime } from '../../utils/time'
 import { isObservationFeatured } from './featured-store'
 import { getAllObservations } from './observation-store'
@@ -39,9 +40,11 @@ function toFeedItem(obs: ReturnType<typeof getAllObservations>[number]): Observa
   const statusLabel = STATUS_LABELS[obs.status]
   let displayStatusLabel = statusLabel
 
-  if (obs.status === 'identified' && obs.species_name) {
-    displayStatusLabel = `已鉴定·${obs.species_name}`
+  if (obs.status === 'identified') {
+    displayStatusLabel = formatIdentifiedStatusLabel(obs.species_name, obs.species_remark)
   }
+
+  const speciesLabel = formatSpeciesLabel(obs.species_name, obs.species_remark)
 
   return {
     obs_id: obs.obs_id,
@@ -49,6 +52,8 @@ function toFeedItem(obs: ReturnType<typeof getAllObservations>[number]): Observa
     note: obs.note,
     location_name: obs.location_name,
     species_name: obs.species_name,
+    species_remark: obs.species_remark,
+    species_label: speciesLabel || undefined,
     status: obs.status,
     status_label: displayStatusLabel,
     submitted_at: obs.submitted_at,

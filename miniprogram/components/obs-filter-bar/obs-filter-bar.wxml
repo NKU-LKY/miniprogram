@@ -60,7 +60,7 @@
   <view class="search-row" wx:if="{{enableSearch && showSearch}}">
     <input
       class="search-input"
-      placeholder="搜索描述、物种、地点..."
+      placeholder="搜索描述、类别、备注、地点..."
       value="{{searchInput}}"
       confirm-type="search"
       bindinput="onSearchInput"

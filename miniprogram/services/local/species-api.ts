@@ -1,5 +1,7 @@
+import { isValidSpeciesCategory } from '../../data/species-categories'
 import type { SpeciesArchiveDetail, SpeciesArchiveSummary } from '../../types/species'
 import { buildSpeciesArchiveDetail, buildSpeciesArchiveSummaries } from '../../utils/species-archive'
+import { resolveSpeciesArchiveKey } from '../../utils/species-migration'
 import { getAllObservations } from './observation-store'
 
 function getArchivableObservations() {
@@ -20,5 +22,9 @@ export function listSpeciesArchives(): SpeciesArchiveSummary[] {
 export function getSpeciesArchive(speciesName: string): SpeciesArchiveDetail | null {
   const name = speciesName.trim()
   if (!name) return null
-  return buildSpeciesArchiveDetail(name, getArchivableObservations())
+
+  const categoryKey = isValidSpeciesCategory(name) ? name : resolveSpeciesArchiveKey(name)
+  if (!categoryKey) return null
+
+  return buildSpeciesArchiveDetail(categoryKey, getArchivableObservations())
 }

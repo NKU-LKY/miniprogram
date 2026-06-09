@@ -1,3 +1,4 @@
+import { SPECIES_CATEGORIES } from '../../data/species-categories'
 import { createObservation } from '../../services/api/observation'
 import { getDeviceLocation, hasValidCoordinate } from '../../utils/geo'
 import {
@@ -36,7 +37,10 @@ Page({
     locating: false,
     resolvingName: false,
     locationFailed: false,
-    speciesName: '',
+    speciesCategories: SPECIES_CATEGORIES,
+    speciesCategoryIndex: -1,
+    speciesCategoryName: '',
+    speciesRemark: '',
     needsIdentification: false,
     saveDraftEnabled: false,
     submitting: false,
@@ -64,7 +68,9 @@ Page({
         latitude: draft.latitude || 0,
         longitude: draft.longitude || 0,
         hasLocation: draft.hasLocation === true,
-        speciesName: draft.speciesName || '',
+        speciesCategoryIndex: draft.speciesCategoryIndex ?? -1,
+        speciesCategoryName: draft.speciesCategoryName || '',
+        speciesRemark: draft.speciesRemark || '',
         needsIdentification: draft.needsIdentification === true,
         saveDraftEnabled: true,
         locationFailed: false,
@@ -114,7 +120,9 @@ Page({
       latitude: this.data.latitude,
       longitude: this.data.longitude,
       hasLocation: this.data.hasLocation,
-      speciesName: this.data.speciesName,
+      speciesCategoryName: this.data.speciesCategoryName,
+      speciesCategoryIndex: this.data.speciesCategoryIndex,
+      speciesRemark: this.data.speciesRemark,
       needsIdentification: this.data.needsIdentification,
       updatedAt: new Date().toISOString(),
     }
@@ -194,8 +202,29 @@ Page({
     })
   },
 
-  onSpeciesInput(e: WechatMiniprogram.Input) {
-    this.setData({ speciesName: e.detail.value })
+  onSpeciesCategoryChange(e: WechatMiniprogram.PickerChange) {
+    const index = Number(e.detail.value)
+    const category = SPECIES_CATEGORIES[index]
+    if (!category) return
+
+    this.setData({
+      speciesCategoryIndex: index,
+      speciesCategoryName: category.name,
+    })
+    this.scheduleSaveDraft()
+  },
+
+  onClearSpeciesCategory() {
+    this.setData({
+      speciesCategoryIndex: -1,
+      speciesCategoryName: '',
+      speciesRemark: '',
+    })
+    this.scheduleSaveDraft()
+  },
+
+  onSpeciesRemarkInput(e: WechatMiniprogram.Input) {
+    this.setData({ speciesRemark: e.detail.value })
     this.scheduleSaveDraft()
   },
 
@@ -264,7 +293,8 @@ Page({
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         note: this.data.note.trim(),
-        species_name: this.data.speciesName.trim(),
+        species_name: this.data.speciesCategoryName.trim() || undefined,
+        species_remark: this.data.speciesRemark.trim() || undefined,
         needs_identification: this.data.needsIdentification,
       })
 

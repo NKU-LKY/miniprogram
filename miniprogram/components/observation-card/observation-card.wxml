@@ -15,7 +15,7 @@
     <view class="location">
       <text class="location-icon">📍</text>
       <text class="location-text">{{card.location_name}}</text>
-      <text class="species" wx:if="{{card.species_name}}">· {{card.species_name}}</text>
+      <text class="species" wx:if="{{card.species_label}}">· {{card.species_label}}</text>
     </view>
   </view>
 

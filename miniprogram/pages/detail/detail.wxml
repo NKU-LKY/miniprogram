@@ -51,7 +51,7 @@
 
       <block wx:else>
         <view class="panel-hint" wx:if="{{identification.claimed_by_me}}">
-          <text>你已认领此记录，请填写物种名称完成鉴定</text>
+          <text>你已认领此记录，请选择物种类别并填写物种备注</text>
         </view>
         <view class="panel-hint" wx:elif="{{identification.can_claim}}">
           <text>请先认领此记录，再进行物种鉴定</text>
@@ -59,17 +59,33 @@
 
         <view class="identify-form" wx:if="{{identification.can_identify}}">
           <view class="form-field">
-            <text class="field-label">鉴定物种 *</text>
+            <text class="field-label">物种类别 *</text>
+            <picker
+              mode="selector"
+              range="{{speciesCategories}}"
+              range-key="name"
+              value="{{speciesCategoryIndex}}"
+              bindchange="onSpeciesCategoryChange"
+            >
+              <view class="picker-display">
+                <text wx:if="{{speciesCategoryName}}" class="picker-value">{{speciesCategoryName}}</text>
+                <text wx:else class="picker-placeholder">选择大类，如：鸟类</text>
+                <text class="picker-arrow">›</text>
+              </view>
+            </picker>
+          </view>
+          <view class="form-field">
+            <text class="field-label">物种备注</text>
             <input
               class="field-input"
-              placeholder="填写正式物种名称，如：麻雀"
+              placeholder="填写具体物种信息，如：喜鹊、麻雀"
               maxlength="30"
-              value="{{speciesInput}}"
-              bindinput="onSpeciesInput"
+              value="{{speciesRemarkInput}}"
+              bindinput="onSpeciesRemarkInput"
             />
           </view>
           <view class="form-field">
-            <text class="field-label">鉴定备注</text>
+            <text class="field-label">鉴定说明</text>
             <input
               class="field-input"
               placeholder="可选，如鉴定依据或补充说明"
@@ -93,7 +109,7 @@
           >释放认领</view>
           <view
             wx:if="{{identification.can_identify}}"
-            class="panel-btn submit {{speciesInput ? 'active' : ''}}"
+            class="panel-btn submit {{speciesCategoryName ? 'active' : ''}}"
             bindtap="onSubmitIdentification"
           >提交鉴定</view>
         </view>
@@ -138,7 +154,7 @@
 
       <view class="meta-row">
         <text class="meta-item">📍 {{detail.location_name}}</text>
-        <text class="meta-item" wx:if="{{detail.species_name}}">🌿 {{detail.species_name}}</text>
+        <text class="meta-item" wx:if="{{detail.species_label}}">🌿 {{detail.species_label}}</text>
       </view>
       <view class="location-detail-row" wx:if="{{detail.location_detail}}">
         <text class="location-detail-text">{{detail.location_detail}}</text>

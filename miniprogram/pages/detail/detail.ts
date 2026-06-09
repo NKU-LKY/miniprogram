@@ -24,6 +24,8 @@ import {
 } from '../../services/local/admin-api'
 import type { ObservationCommentThreadItem } from '../../types/comment'
 import type { ObservationDetailItem } from '../../types/observation'
+import { getSpeciesCategoryIndex, SPECIES_CATEGORIES } from '../../data/species-categories'
+import { formatSpeciesLabel } from '../../utils/species-display'
 import { canIdentifySpecies } from '../../utils/permissions'
 import { getCurrentUser } from '../../utils/session'
 
@@ -34,6 +36,8 @@ interface DetailView {
   location_name: string
   location_detail: string
   species_name: string
+  species_remark: string
+  species_label: string
   status: string
   status_label: string
   time_text: string
@@ -121,6 +125,8 @@ function toDetailView(item: ObservationDetailItem): DetailView {
     location_name: item.location_name,
     location_detail: item.location_detail || '',
     species_name: item.species_name || '',
+    species_remark: item.species_remark || '',
+    species_label: item.species_label || formatSpeciesLabel(item.species_name, item.species_remark),
     status: item.status,
     status_label: item.status_label || '',
     time_text: item.time_text,
@@ -166,7 +172,10 @@ Page({
     isFeatured: false,
     showIdentificationPanel: false,
     identification: null as IdentificationView | null,
-    speciesInput: '',
+    speciesCategories: SPECIES_CATEGORIES,
+    speciesCategoryIndex: 0,
+    speciesCategoryName: '',
+    speciesRemarkInput: '',
     reviewNoteInput: '',
     identifying: false,
     claiming: false,
@@ -233,7 +242,11 @@ Page({
         isFeatured: result.is_featured,
         showIdentificationPanel: Boolean(identificationState),
         identification: identificationState ? toIdentificationView(identificationState) : null,
-        speciesInput: '',
+        speciesCategoryIndex: identificationState
+          ? getSpeciesCategoryIndex(identificationState.species_name)
+          : 0,
+        speciesCategoryName: identificationState?.species_name || '',
+        speciesRemarkInput: identificationState?.species_remark || '',
         reviewNoteInput: '',
         showAppealPanel: Boolean(isOwner && isRejected),
         canSubmitAppeal,
@@ -497,8 +510,18 @@ Page({
     })
   },
 
-  onSpeciesInput(e: WechatMiniprogram.Input) {
-    this.setData({ speciesInput: e.detail.value })
+  onSpeciesCategoryChange(e: WechatMiniprogram.PickerChange) {
+    const index = Number(e.detail.value)
+    const category = SPECIES_CATEGORIES[index]
+    if (!category) return
+    this.setData({
+      speciesCategoryIndex: index,
+      speciesCategoryName: category.name,
+    })
+  },
+
+  onSpeciesRemarkInput(e: WechatMiniprogram.Input) {
+    this.setData({ speciesRemarkInput: e.detail.value })
   },
 
   onReviewNoteInput(e: WechatMiniprogram.Input) {
@@ -562,18 +585,20 @@ Page({
     const user = getCurrentUser()
     if (!user) return
 
-    const speciesName = this.data.speciesInput.trim()
-    if (!speciesName) {
-      wx.showToast({ title: '请填写鉴定物种名称', icon: 'none' })
+    const categoryName = this.data.speciesCategoryName.trim()
+    if (!categoryName) {
+      wx.showToast({ title: '请选择物种类别', icon: 'none' })
       return
     }
 
     const obsId = this.data.obsId
+    const speciesRemarkInput = this.data.speciesRemarkInput
     const reviewNoteInput = this.data.reviewNoteInput
+    const displayLabel = formatSpeciesLabel(categoryName, speciesRemarkInput)
 
     wx.showModal({
       title: '提交鉴定',
-      content: `确认将该记录鉴定为「${speciesName}」？`,
+      content: `确认将该记录鉴定为「${displayLabel}」？`,
       confirmColor: '#4c8c4a',
       success: (res) => {
         if (!res.confirm || this.data.identifying) return
@@ -584,7 +609,8 @@ Page({
           const result = completeIdentification(
             obsId,
             user.user_id,
-            speciesName,
+            categoryName,
+            speciesRemarkInput,
             reviewNoteInput,
           )
           if (!result.success) {

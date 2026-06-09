@@ -190,6 +190,42 @@ page {
   line-height: 1;
 }
 
+.picker-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72rpx;
+  padding: 0 16rpx;
+  background: #f8fbf6;
+  border-radius: 10rpx;
+}
+
+.picker-value {
+  font-size: 26rpx;
+  color: #333;
+}
+
+.picker-placeholder {
+  font-size: 26rpx;
+  color: #9ab09b;
+}
+
+.picker-arrow {
+  font-size: 32rpx;
+  color: #9ab09b;
+  line-height: 1;
+}
+
+.picker-clear {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #9ab09b;
+}
+
+.picker-clear:active {
+  opacity: 0.75;
+}
+
 .switch-row {
   display: flex;
   align-items: center;

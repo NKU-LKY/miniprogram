@@ -168,7 +168,7 @@
           <text class="record-note">{{item.note || '暂无描述'}}</text>
           <view class="record-bottom">
             <text class="record-location">📍 {{item.location_name}}</text>
-            <text class="record-species" wx:if="{{item.species_name}}">· {{item.species_name}}</text>
+            <text class="record-species" wx:if="{{item.species_label}}">· {{item.species_label}}</text>
           </view>
           <view class="record-stats">
             <text class="stat-text">♥ {{item.like_count}}</text>
@@ -205,7 +205,7 @@
       <view class="empty-block" wx:else>
         <text class="empty-icon">📚</text>
         <text class="empty-title">还没有解锁物种图鉴</text>
-        <text class="empty-desc">上传带物种标注的观测记录后会自动收录</text>
+        <text class="empty-desc">上传并选择物种类别后，将按大类自动收录</text>
       </view>
     </view>
   </block>

@@ -1,10 +1,10 @@
 /** 发布页支持语音输入的字段 */
-export type VoiceInputTarget = 'note' | 'locationDetail' | 'speciesName'
+export type VoiceInputTarget = 'note' | 'locationDetail' | 'speciesRemark'
 
 const FOCUS_FIELD_MAP: Record<VoiceInputTarget, string> = {
   note: 'focusNote',
   locationDetail: 'focusLocationDetail',
-  speciesName: 'focusSpeciesName',
+  speciesRemark: 'focusSpeciesRemark',
 }
 
 /** 将识别文本追加到已有内容，并遵守字数上限 */

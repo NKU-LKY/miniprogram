@@ -1,3 +1,4 @@
+import { isValidSpeciesCategory } from '../data/species-categories'
 import type { Observation } from '../types/observation'
 import type {
   SpeciesArchiveDetail,
@@ -8,6 +9,7 @@ import type {
 } from '../types/species'
 import { getSpeciesMarkerLabel } from './map-markers'
 import { isAnimalSpecies } from './species-meta'
+import { migrateObservationSpecies } from './species-migration'
 import { formatRelativeTime } from './time'
 
 const TIME_SLOTS = [
@@ -21,19 +23,24 @@ const TIME_SLOTS = [
   { label: '深夜', start: 22, end: 24 },
 ]
 
-function hasSpeciesName(obs: Observation): obs is Observation & { species_name: string } {
-  return Boolean(obs.species_name && obs.species_name.trim())
+function hasSpeciesCategory(obs: Observation): obs is Observation & { species_name: string } {
+  const name = obs.species_name?.trim()
+  return Boolean(name && isValidSpeciesCategory(name))
 }
 
-function groupBySpecies(observations: Observation[]): Map<string, Observation[]> {
+function prepareArchiveObservations(observations: Observation[]): Observation[] {
+  return observations.map(migrateObservationSpecies).filter(hasSpeciesCategory)
+}
+
+function groupByCategory(observations: Observation[]): Map<string, Observation[]> {
   const groups = new Map<string, Observation[]>()
 
   observations.forEach((obs) => {
-    if (!hasSpeciesName(obs)) return
-    const name = obs.species_name.trim()
-    const list = groups.get(name) || []
+    if (!hasSpeciesCategory(obs)) return
+    const category = obs.species_name.trim()
+    const list = groups.get(category) || []
     list.push(obs)
-    groups.set(name, list)
+    groups.set(category, list)
   })
 
   return groups
@@ -92,25 +99,26 @@ function toRelatedRecords(observations: Observation[]): SpeciesRelatedRecord[] {
       obs_id: obs.obs_id,
       photo_url: obs.photo_url,
       note: obs.note || '暂无描述',
+      species_remark: obs.species_remark,
       location_name: obs.location_name,
       time_text: formatRelativeTime(obs.submitted_at),
       like_count: obs.like_count,
     }))
 }
 
-function buildSummary(speciesName: string, observations: Observation[]): SpeciesArchiveSummary {
+function buildSummary(categoryName: string, observations: Observation[]): SpeciesArchiveSummary {
   const sorted = [...observations].sort(
     (a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime(),
   )
   const locations = aggregateLocations(sorted)
-  const isAnimal = isAnimalSpecies(speciesName)
+  const isAnimal = isAnimalSpecies(categoryName)
   const activePeriods = isAnimal
     ? computeActivePeriods(sorted.map((obs) => obs.submitted_at))
     : ''
 
   return {
-    species_name: speciesName,
-    marker_label: getSpeciesMarkerLabel(speciesName),
+    species_name: categoryName,
+    marker_label: getSpeciesMarkerLabel(categoryName),
     is_animal: isAnimal,
     record_count: sorted.length,
     cover_photo: sorted[0].photo_url,
@@ -122,26 +130,31 @@ function buildSummary(speciesName: string, observations: Observation[]): Species
 }
 
 export function buildSpeciesArchiveSummaries(observations: Observation[]): SpeciesArchiveSummary[] {
-  const groups = groupBySpecies(observations)
+  const prepared = prepareArchiveObservations(observations)
+  const groups = groupByCategory(prepared)
 
   return Array.from(groups.entries())
-    .map(([speciesName, list]) => buildSummary(speciesName, list))
+    .map(([categoryName, list]) => buildSummary(categoryName, list))
     .sort((a, b) => b.record_count - a.record_count)
 }
 
 export function buildSpeciesArchiveDetail(
-  speciesName: string,
+  categoryName: string,
   observations: Observation[],
 ): SpeciesArchiveDetail | null {
-  const groups = groupBySpecies(observations)
-  const list = groups.get(speciesName.trim())
+  const trimmed = categoryName.trim()
+  if (!isValidSpeciesCategory(trimmed)) return null
+
+  const prepared = prepareArchiveObservations(observations)
+  const groups = groupByCategory(prepared)
+  const list = groups.get(trimmed)
   if (!list || list.length === 0) return null
 
-  const isAnimal = isAnimalSpecies(speciesName)
+  const isAnimal = isAnimalSpecies(trimmed)
 
   return {
-    species_name: speciesName,
-    marker_label: getSpeciesMarkerLabel(speciesName),
+    species_name: trimmed,
+    marker_label: getSpeciesMarkerLabel(trimmed),
     is_animal: isAnimal,
     record_count: list.length,
     photo_wall: toPhotoWall(list),

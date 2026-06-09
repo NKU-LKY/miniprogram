@@ -10,7 +10,7 @@
   <block wx:else>
     <view class="summary-bar">
       <text class="summary-text">共 {{pendingCount}} 条待鉴定记录</text>
-      <text class="summary-hint">认领后可填写物种名称完成鉴定</text>
+      <text class="summary-hint">认领后可修改物种类别与物种备注</text>
     </view>
 
     <scroll-view class="scrollarea" scroll-y type="list">
@@ -29,6 +29,7 @@
           ></image>
           <view class="queue-body">
             <text class="queue-note">{{item.note}}</text>
+            <text class="queue-species" wx:if="{{item.species_label}}">初步标注：{{item.species_label}}</text>
             <view class="queue-meta">
               <text class="meta-text">📍 {{item.location_name}}</text>
               <text class="meta-text">{{item.publisher_nickname}} · {{item.time_text}}</text>
