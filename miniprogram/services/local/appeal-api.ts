@@ -37,8 +37,10 @@ export function getOwnerAppealForObs(obsId: string, userId: string): OwnerAppeal
   const pending = findPendingAppealByObsId(trimmedId)
   if (pending) return toOwnerAppealView(pending)
 
-  const latest = listAppealsByObsId(trimmedId)[0]
-  return latest ? toOwnerAppealView(latest) : null
+  const rejected = listAppealsByObsId(trimmedId).find((item) => item.status === 'rejected')
+  if (rejected) return toOwnerAppealView(rejected)
+
+  return null
 }
 
 export function submitObservationAppeal(

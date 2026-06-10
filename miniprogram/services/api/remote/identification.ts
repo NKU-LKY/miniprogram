@@ -1,6 +1,8 @@
 import { isValidSpeciesCategory } from '../../../data/species-categories'
 import type { Observation } from '../../../types/observation'
+import { formatSpeciesLabel } from '../../../utils/species-display'
 import { request } from './client'
+import { notifyIdentificationCompletedRemote } from './notification'
 import { findOrCreateSpecies } from './post'
 import {
   getObservationPhotoUrl,
@@ -159,6 +161,18 @@ export async function completeIdentificationRemote(
         },
       },
     )
+
+    const ownerId = req.observation.user?.userId
+    if (ownerId) {
+      const speciesLabel = formatSpeciesLabel(trimmedCategory, speciesRemark) || '未标注'
+      const noteSuffix = reviewNote?.trim() ? `，鉴定说明：${reviewNote.trim()}` : ''
+      void notifyIdentificationCompletedRemote({
+        ownerUserId: ownerId,
+        reviewerUserId: reviewerId,
+        obsId,
+        content: `你提交的观测记录已被鉴定为「${speciesLabel}」${noteSuffix}`,
+      }).catch((err) => console.warn('create identification notification failed:', err))
+    }
 
     return { success: true, observation: toLocalObservation(updated) }
   } catch (err) {

@@ -90,6 +90,7 @@ interface FlatFeedItem {
   photo_url: string
   note: string
   location_name: string
+  location_detail: string
   species_name: string
   species_label: string
   status_label: string
@@ -107,6 +108,7 @@ function flattenItem(item: ObservationFeedItem): FlatFeedItem {
     photo_url: item.photo_url,
     note: item.note || '',
     location_name: item.location_name,
+    location_detail: item.location_detail || '',
     species_name: item.species_name || '',
     species_label: item.species_label || item.species_name || '',
     status_label: item.status_label || '',

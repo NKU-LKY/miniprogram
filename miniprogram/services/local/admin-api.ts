@@ -10,7 +10,7 @@ import {
   listPendingAppeals,
   resolveAppeal,
 } from './appeal-store'
-import { findCommentById, getCommentsByObsId, softDeleteComment } from './comment-store'
+import { findCommentById, getCommentsByObsId, restoreComment, softDeleteComment } from './comment-store'
 import { isObservationFeatured, setObservationFeatured } from './featured-store'
 import {
   notifyAppealApproved,
@@ -52,6 +52,8 @@ export interface ModerationCommentItem {
   content: string
   author_nickname: string
   time_text: string
+  is_hidden: boolean
+  status_label?: string
 }
 
 export interface AdminActionResult {
@@ -150,16 +152,18 @@ export function listCommentsForModeration(): ModerationCommentItem[] | { error: 
   if (!admin) return { error: '无权限访问' }
 
   return getAllCommentsRaw()
-    .filter((item) => item.status === 'active')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .map((comment) => {
       const author = findUserById(comment.user_id)
+      const isHidden = comment.status === 'deleted'
       return {
         comment_id: comment.comment_id,
         obs_id: comment.obs_id,
         content: comment.content,
         author_nickname: (author && author.nickname) || '未知用户',
         time_text: formatRelativeTime(comment.created_at),
+        is_hidden: isHidden,
+        status_label: isHidden ? '已隐藏' : undefined,
       }
     })
 }
@@ -217,6 +221,7 @@ export function listAppealsForModeration(): ModerationAppealItem[] | { error: st
     return {
       appeal_id: appeal.appeal_id,
       obs_id: appeal.obs_id,
+      appellant_user_id: appeal.user_id,
       photo_url: (obs && obs.photo_url) || '',
       obs_note: (obs && (obs.note || '（无描述）')) || '（记录已不存在）',
       reason: appeal.reason,
@@ -281,6 +286,20 @@ export function hideCommentForAdmin(commentId: string): AdminActionResult {
 
   const deleted = softDeleteComment(commentId)
   if (!deleted) return { success: false, message: '操作失败' }
+
+  return { success: true }
+}
+
+export function restoreCommentForAdmin(commentId: string): AdminActionResult {
+  const admin = requireAdmin()
+  if (!admin) return { success: false, message: '无权限操作' }
+
+  const comment = findCommentById(commentId)
+  if (!comment) return { success: false, message: '评论不存在' }
+  if (comment.status !== 'deleted') return { success: false, message: '该评论无需恢复' }
+
+  const restored = restoreComment(commentId)
+  if (!restored) return { success: false, message: '操作失败' }
 
   return { success: true }
 }

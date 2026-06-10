@@ -31,6 +31,7 @@ import { USE_LOCAL_BACKEND } from './config'
 import {
   createObservationCommentRemote,
   listObservationCommentThreadsRemote,
+  toggleCommentLikeRemote,
   toggleObservationLikeRemote,
 } from './remote/interaction'
 import {
@@ -118,6 +119,17 @@ export function toggleObservationLike(
     return toggleObservationLikeRemote(obsId, userId)
   }
   return Promise.resolve(localToggleObservationLike(obsId, userId))
+}
+
+export function toggleCommentLike(
+  commentId: string,
+  userId: string,
+  obsId?: string,
+): Promise<{ liked: boolean; like_count: number } | null> {
+  if (!USE_LOCAL_BACKEND) {
+    return toggleCommentLikeRemote(commentId, userId, obsId)
+  }
+  return Promise.resolve(null)
 }
 
 export function createObservationComment(

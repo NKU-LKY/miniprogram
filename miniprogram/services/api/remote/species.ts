@@ -2,16 +2,19 @@ import type { SpeciesArchiveDetail, SpeciesArchiveSummary } from '../../../types
 import { isValidSpeciesCategory } from '../../../data/species-categories'
 import { buildSpeciesArchiveDetail, buildSpeciesArchiveSummaries } from '../../../utils/species-archive'
 import { resolveSpeciesArchiveKey } from '../../../utils/species-migration'
-import { getPostCommentCount, getPostLikeCount, listPublishedPosts } from './post'
+import { getPostCommentCount, getPostLikeCount, hydratePostObservation, listPublishedPosts, prefetchSpeciesForPosts } from './post'
 import { mapObservationStatus, parseSpeciesFields, toFeedItem, toUserId } from './mappers'
 
 async function loadArchivableObservations() {
   const posts = await listPublishedPosts({ page: 1, pageSize: 200 })
+  await prefetchSpeciesForPosts(posts.list)
   const observations = []
 
   for (const post of posts.list) {
     if (!post.observation) continue
-    const obs = post.observation
+    const resolvedPost = await hydratePostObservation(post)
+    const obs = resolvedPost.observation
+    if (!obs) continue
     const status = mapObservationStatus(obs.status, post.status)
     if (status === 'rejected' || status === 'pending_review' || status === 'withdrawn') continue
 
@@ -24,7 +27,7 @@ async function loadArchivableObservations() {
       getPostLikeCount(postId).catch(() => 0),
       getPostCommentCount(postId).catch(() => 0),
     ])
-    const feedItem = toFeedItem(post, likeCount, commentCount)
+    const feedItem = toFeedItem(resolvedPost, likeCount, commentCount)
     if (!feedItem) continue
 
     observations.push({

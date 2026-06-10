@@ -133,23 +133,6 @@ page {
   min-width: 0;
 }
 
-.list-top {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8rpx;
-}
-
-.list-label {
-  font-size: 28rpx;
-  margin-right: 8rpx;
-}
-
-.list-species {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #2d5a2e;
-}
-
 .list-note {
   display: block;
   font-size: 24rpx;
@@ -158,15 +141,27 @@ page {
   margin-bottom: 8rpx;
 }
 
-.list-location {
+.list-location,
+.list-species {
+  display: block;
+  width: 100%;
   font-size: 22rpx;
   color: #7a9a7b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-species {
+  margin-top: 4rpx;
+  color: #4a6b4b;
 }
 
 .list-meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  margin-top: 8rpx;
   gap: 12rpx;
 }
 
@@ -388,23 +383,6 @@ page {
   min-width: 0;
 }
 
-.sheet-record-top {
-  display: flex;
-  align-items: center;
-  margin-bottom: 6rpx;
-}
-
-.sheet-record-label {
-  font-size: 26rpx;
-  margin-right: 8rpx;
-}
-
-.sheet-record-species {
-  font-size: 26rpx;
-  font-weight: 600;
-  color: #2d5a2e;
-}
-
 .sheet-record-note {
   display: block;
   font-size: 24rpx;
@@ -416,7 +394,25 @@ page {
   white-space: nowrap;
 }
 
+.sheet-record-location,
+.sheet-record-species {
+  display: block;
+  width: 100%;
+  font-size: 22rpx;
+  color: #7a9a7b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-record-species {
+  margin-top: 4rpx;
+  color: #4a6b4b;
+}
+
 .sheet-record-time {
+  display: block;
+  margin-top: 8rpx;
   font-size: 20rpx;
   color: #9ab09b;
 }

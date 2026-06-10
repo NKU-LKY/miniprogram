@@ -9,6 +9,8 @@ import {
 import { USE_LOCAL_BACKEND } from './config'
 import {
   clearAllNotificationsRemote,
+  ensureAdminAppealNotificationsRemote,
+  ensureUserAppealResultNotificationsRemote,
   getUnreadNotificationCountRemote,
   listUserNotificationsRemote,
   readAllNotificationsRemote,
@@ -51,4 +53,18 @@ export function clearAllNotifications(userId: string): Promise<number> {
     return clearAllNotificationsRemote(userId)
   }
   return Promise.resolve(localClearAllNotifications(userId))
+}
+
+export function ensureAdminAppealNotifications(userId: string): Promise<void> {
+  if (!USE_LOCAL_BACKEND) {
+    return ensureAdminAppealNotificationsRemote(userId)
+  }
+  return Promise.resolve()
+}
+
+export function ensureUserAppealResultNotifications(userId: string): Promise<void> {
+  if (!USE_LOCAL_BACKEND) {
+    return ensureUserAppealResultNotificationsRemote(userId)
+  }
+  return Promise.resolve()
 }

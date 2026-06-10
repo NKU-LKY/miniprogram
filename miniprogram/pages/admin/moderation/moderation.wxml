@@ -23,7 +23,7 @@
         class="tab-item {{activeTab === 'appeals' ? 'active' : ''}}"
         data-tab="appeals"
         bindtap="onTabChange"
-      >申诉{{appealList.length > 0 ? ' (' + appealList.length + ')' : ''}}</view>
+      >申诉{{appealPendingCount > 0 ? ' (' + appealPendingCount + ')' : ''}}</view>
     </view>
 
     <scroll-view class="scrollarea" scroll-y enhanced show-scrollbar="{{false}}">
@@ -92,18 +92,28 @@
       </block>
 
       <block wx:if="{{activeTab === 'comments' && !loading}}">
-        <view class="comment-card" wx:for="{{commentList}}" wx:key="comment_id">
+        <view class="comment-card {{item.is_hidden ? 'hidden-comment' : ''}}" wx:for="{{commentList}}" wx:key="comment_id">
           <view class="comment-top">
-            <text class="comment-author">{{item.author_nickname}}</text>
+            <view class="comment-meta-left">
+              <text class="comment-author">{{item.author_nickname}}</text>
+              <text class="status-tag hidden" wx:if="{{item.is_hidden}}">{{item.status_label || '已隐藏'}}</text>
+            </view>
             <text class="comment-time">{{item.time_text}}</text>
           </view>
           <text class="comment-content">{{item.content}}</text>
           <view class="action-row">
             <view
+              wx:if="{{!item.is_hidden}}"
               class="action-btn hide"
               data-id="{{item.comment_id}}"
               bindtap="onHideComment"
             >隐藏</view>
+            <view
+              wx:if="{{item.is_hidden}}"
+              class="action-btn restore"
+              data-id="{{item.comment_id}}"
+              bindtap="onRestoreComment"
+            >取消隐藏</view>
             <view class="action-btn link" data-id="{{item.obs_id}}" bindtap="onGoDetail">查看记录</view>
           </view>
         </view>
@@ -132,11 +142,15 @@
               <view
                 class="action-btn restore"
                 data-id="{{item.appeal_id}}"
+                data-obs-id="{{item.obs_id}}"
+                data-owner-id="{{item.appellant_user_id}}"
                 bindtap="onApproveAppeal"
               >取消隐藏</view>
               <view
                 class="action-btn hide"
                 data-id="{{item.appeal_id}}"
+                data-obs-id="{{item.obs_id}}"
+                data-owner-id="{{item.appellant_user_id}}"
                 bindtap="onRejectAppeal"
               >驳回申诉</view>
               <view class="action-btn link" data-id="{{item.obs_id}}" bindtap="onGoDetail">查看</view>

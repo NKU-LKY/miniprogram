@@ -161,6 +161,21 @@ page {
   margin-bottom: 8rpx;
 }
 
+.comment-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 0;
+}
+
+.comment-card.hidden-comment {
+  opacity: 0.88;
+}
+
+.comment-card.hidden-comment .comment-content {
+  color: #8a9a8b;
+}
+
 .comment-author {
   font-size: 24rpx;
   font-weight: 500;

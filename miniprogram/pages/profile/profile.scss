@@ -41,6 +41,24 @@ page {
   color: #2d5a2e;
 }
 
+.unavailable-desc {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #7a9a7b;
+  text-align: center;
+}
+
+.unavailable-btn {
+  margin-top: 28rpx;
+  padding: 0 40rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  font-size: 28rpx;
+  color: #fff;
+  background: #4c8c4a;
+  border-radius: 36rpx;
+}
+
 .profile-header {
   display: flex;
   align-items: center;
@@ -296,6 +314,12 @@ page {
   margin-bottom: 0;
 }
 
+.section-more-link {
+  font-size: 24rpx;
+  color: #4c8c4a;
+  flex-shrink: 0;
+}
+
 .section-title-row {
   display: flex;
   align-items: center;
@@ -512,13 +536,22 @@ page {
 }
 
 .record-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
   margin-bottom: 8rpx;
 }
 
 .record-location,
 .record-species {
+  display: block;
+  width: 100%;
   font-size: 22rpx;
   color: #7a9a7b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .record-stats {

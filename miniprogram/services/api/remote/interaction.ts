@@ -2,13 +2,56 @@ import type { ObservationCommentItem } from '../../../types/comment'
 import { validateCommentContent } from '../../../utils/content-filter'
 import { request } from './client'
 import {
+  notifyCommentLikeRemote,
+  notifyCommentPostRemote,
+  notifyCommentReplyRemote,
+  notifyPostLikeRemote,
+} from './notification'
+import {
   checkPostLiked,
   getPostCommentCount,
   getPostIdByObsId,
   getPostLikeCount,
 } from './post'
 import { mapCommentTree, toRemoteUserId, toUserId } from './mappers'
-import type { PaginatedResult, RemoteComment } from './types'
+import type { PaginatedResult, RemoteComment, RemotePost } from './types'
+
+async function notifyCommentCreated(params: {
+  obsId: string
+  postId: string
+  commenterUserId: string
+  content: string
+  saved: RemoteComment
+}): Promise<void> {
+  const fullPost = await request<RemotePost>(`/api/posts/${params.postId}`).catch(() => null)
+  const obsId = fullPost?.observation?.obsId ?? params.obsId
+  const ownerId = fullPost?.observation?.user?.userId
+
+  if (params.saved.parentCommentId) {
+    const parent = await request<RemoteComment>(`/api/comments/${params.saved.parentCommentId}`).catch(
+      () => null,
+    )
+    const recipientId = parent?.user?.userId
+    if (recipientId) {
+      await notifyCommentReplyRemote({
+        replyToUserId: recipientId,
+        commenterUserId: params.commenterUserId,
+        obsId,
+        content: params.content,
+      })
+    }
+    return
+  }
+
+  if (!ownerId) return
+
+  await notifyCommentPostRemote({
+    ownerUserId: ownerId,
+    commenterUserId: params.commenterUserId,
+    obsId,
+    content: params.content,
+  })
+}
 
 export async function toggleObservationLikeRemote(
   obsId: string,
@@ -17,6 +60,7 @@ export async function toggleObservationLikeRemote(
   const postId = await getPostIdByObsId(obsId)
   if (!postId) return null
 
+  const fullPost = await request<RemotePost>(`/api/posts/${postId}`).catch(() => null)
   const liked = await checkPostLiked(postId, userId)
   const method = liked ? 'DELETE' : 'POST'
 
@@ -24,6 +68,56 @@ export async function toggleObservationLikeRemote(
     method,
     data: { postId: Number(postId), userId: toRemoteUserId(userId) },
   })
+
+  if (method === 'POST' && result.liked && fullPost?.observation?.user?.userId) {
+    void notifyPostLikeRemote({
+      ownerUserId: fullPost.observation.user.userId,
+      likerUserId: userId,
+      obsId,
+    }).catch((err) => console.warn('create post like notification failed:', err))
+  }
+
+  return { liked: result.liked, like_count: result.likeCount }
+}
+
+export async function toggleCommentLikeRemote(
+  commentId: string,
+  userId: string,
+  obsId?: string,
+): Promise<{ liked: boolean; like_count: number } | null> {
+  const trimmedId = commentId.trim()
+  if (!trimmedId) return null
+
+  const comment = await request<RemoteComment>(`/api/comments/${trimmedId}`).catch(() => null)
+  if (!comment) return null
+
+  const liked = await request<{ liked: boolean }>('/api/comment-likes/check', {
+    query: { commentId: trimmedId, userId: toRemoteUserId(userId) },
+  })
+    .then((data) => data.liked)
+    .catch(() => false)
+
+  const method = liked ? 'DELETE' : 'POST'
+  const result = await request<{ liked: boolean; likeCount: number }>('/api/comment-likes', {
+    method,
+    data: { commentId: Number(trimmedId), userId: toRemoteUserId(userId) },
+  })
+
+  if (method === 'POST' && result.liked && comment.user?.userId) {
+    let resolvedObsId = obsId
+    if (!resolvedObsId) {
+      const post = await request<RemotePost>(`/api/posts/${comment.postId}`).catch(() => null)
+      resolvedObsId = post?.observation?.obsId ? toUserId(post.observation.obsId) : undefined
+    }
+
+    if (resolvedObsId) {
+      void notifyCommentLikeRemote({
+        commentAuthorUserId: comment.user.userId,
+        likerUserId: userId,
+        obsId: resolvedObsId,
+      }).catch((err) => console.warn('create comment like notification failed:', err))
+    }
+  }
 
   return { liked: result.liked, like_count: result.likeCount }
 }
@@ -58,6 +152,14 @@ export async function createObservationCommentRemote(
 
     const commentCount = await getPostCommentCount(postId)
     const thread = mapCommentTree([{ ...saved, children: [] }])[0]
+
+    void notifyCommentCreated({
+      obsId,
+      postId,
+      commenterUserId: userId,
+      content: content.trim(),
+      saved,
+    }).catch((err) => console.warn('create comment notification failed:', err))
 
     return {
       comment: thread,

@@ -122,8 +122,8 @@
           <text class="obs-note">{{item.note}}</text>
           <view class="obs-bottom">
             <view class="obs-location">
-              <text class="location-text">📍 {{item.location_name}}</text>
-              <text class="species-text" wx:if="{{item.species_label}}">· {{item.species_label}}</text>
+              <text class="location-text">📍 {{item.location_name}}<text wx:if="{{item.location_detail}}"> · {{item.location_detail}}</text></text>
+              <text class="species-text" wx:if="{{item.species_label}}">🌿 {{item.species_label}}</text>
             </view>
             <view class="obs-stats">
               <text class="stat-item">♥ {{item.like_count}}</text>
@@ -170,8 +170,8 @@
           <text class="obs-note">{{item.note}}</text>
           <view class="obs-bottom">
             <view class="obs-location">
-              <text class="location-text">📍 {{item.location_name}}</text>
-              <text class="species-text" wx:if="{{item.species_label}}">· {{item.species_label}}</text>
+              <text class="location-text">📍 {{item.location_name}}<text wx:if="{{item.location_detail}}"> · {{item.location_detail}}</text></text>
+              <text class="species-text" wx:if="{{item.species_label}}">🌿 {{item.species_label}}</text>
             </view>
             <view class="obs-stats">
               <text class="stat-item">♥ {{item.like_count}}</text>

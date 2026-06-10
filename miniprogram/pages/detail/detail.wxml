@@ -153,11 +153,8 @@
       <text class="note-text">{{detail.note}}</text>
 
       <view class="meta-row">
-        <text class="meta-item">📍 {{detail.location_name}}</text>
+        <text class="meta-item">📍 {{detail.location_name}}<text wx:if="{{detail.location_detail}}"> · {{detail.location_detail}}</text></text>
         <text class="meta-item" wx:if="{{detail.species_label}}">🌿 {{detail.species_label}}</text>
-      </view>
-      <view class="location-detail-row" wx:if="{{detail.location_detail}}">
-        <text class="location-detail-text">{{detail.location_detail}}</text>
       </view>
 
       <view class="status-row" wx:if="{{detail.status_label}}">

@@ -26,6 +26,7 @@ export interface OwnerAppealView {
 export interface ModerationAppealItem {
   appeal_id: string
   obs_id: string
+  appellant_user_id: string
   photo_url: string
   obs_note: string
   reason: string

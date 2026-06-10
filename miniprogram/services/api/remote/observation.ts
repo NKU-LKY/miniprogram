@@ -12,7 +12,7 @@ import { normalizeMapLocation } from '../../../utils/map-locations'
 import { formatSpeciesLabel } from '../../../utils/species-display'
 import { formatFullTime, formatRelativeTime } from '../../../utils/time'
 import { uploadFile, request } from './client'
-import { findOrCreateLocation } from './location'
+import { findOrCreateLocation, hydrateObservationLocation } from './location'
 import {
   checkPostLiked,
   createPostForObservation,
@@ -21,13 +21,16 @@ import {
   getPostCommentCount,
   getPostIdByObsId,
   getPostLikeCount,
+  hydratePostObservation,
   listPublishedPosts,
+  prefetchSpeciesForPosts,
   cachePostId,
 } from './post'
 import {
   getObservationPhotoUrl,
   mapCommentTree,
   mapObservationStatus,
+  parseLocationDetail,
   parseSpeciesFields,
   toFeedItem,
   toRemoteUserId,
@@ -43,6 +46,7 @@ export type SetCommentsEnabledResult = {
 }
 
 async function enrichFeedItems(posts: RemotePost[]): Promise<ObservationFeedItem[]> {
+  await prefetchSpeciesForPosts(posts)
   const items: ObservationFeedItem[] = []
 
   for (const post of posts) {
@@ -51,12 +55,13 @@ async function enrichFeedItems(posts: RemotePost[]): Promise<ObservationFeedItem
     const postId = String(post.postId)
     cachePostId(obsId, post.postId)
 
-    const [likeCount, commentCount] = await Promise.all([
+    const [likeCount, commentCount, resolvedPost] = await Promise.all([
       getPostLikeCount(postId).catch(() => 0),
       getPostCommentCount(postId).catch(() => 0),
+      hydratePostObservation(post),
     ])
 
-    const item = toFeedItem(post, likeCount, commentCount)
+    const item = toFeedItem(resolvedPost, likeCount, commentCount)
     if (item) items.push(item)
   }
 
@@ -71,6 +76,7 @@ function remoteObsToLocalShape(obs: RemoteObservation, post?: RemotePost | null)
     species_name: species.species_name,
     species_remark: species.species_remark,
     location_name: obs.location?.name || '',
+    location_detail: parseLocationDetail(obs.location),
     latitude: obs.location?.latitude ?? undefined,
     longitude: obs.location?.longitude ?? undefined,
     note: obs.content || '',
@@ -148,37 +154,64 @@ export async function listMyFeedRemote(
     query: { page: 1, pageSize: 200 },
   })
 
-  const posts = await Promise.all(
-    result.list.map(async (obs) => {
-      const post = await getPostByObsId(String(obs.obsId)).catch(() => null)
-      return { obs, post }
-    }),
+  const entries = (
+    await Promise.all(
+      (result?.list ?? []).map(async (obs) => {
+        const post = await getPostByObsId(String(obs.obsId)).catch(() => null)
+        return { obs, post }
+      }),
+    )
   )
-
-  const shapes = posts
     .filter(({ obs, post }) => mapObservationStatus(obs.status, post?.status) !== 'withdrawn')
-    .map(({ obs, post }) => remoteObsToLocalShape(obs, post))
+    .map(({ obs, post }) => ({
+      obs,
+      post,
+      shape: remoteObsToLocalShape(obs, post),
+    }))
 
-  const filtered = applyClientFilter(shapes, filter)
+  let filteredEntries = entries
+  if (filter) {
+    const filteredShapes = applyClientFilter(
+      entries.map((entry) => entry.shape),
+      filter,
+    )
+    const allowed = new Set(filteredShapes.map((item) => item.obs_id))
+    filteredEntries = entries.filter((entry) => allowed.has(entry.shape.obs_id))
+  }
+
   const start = (page - 1) * pageSize
-  const slice = filtered.slice(start, start + pageSize)
+  const slice = filteredEntries.slice(start, start + pageSize)
 
   const list: ObservationFeedItem[] = []
-  for (const shape of slice) {
-    const post = await getPostByObsId(shape.obs_id).catch(() => null)
-    if (!post) continue
-    const [likeCount, commentCount] = await Promise.all([
-      getPostLikeCount(String(post.postId)).catch(() => 0),
-      getPostCommentCount(String(post.postId)).catch(() => 0),
+  for (const { obs, post } of slice) {
+    const feedPost: RemotePost =
+      post ||
+      ({
+        postId: 0,
+        observation: obs,
+        viewCount: 0,
+        priority: 0,
+        status: 'published',
+        allowComment: true,
+        createdAt: obs.submittedAt,
+        updatedAt: obs.submittedAt,
+      } as RemotePost)
+
+    const postId = post ? String(post.postId) : null
+    const [likeCount, commentCount, resolvedPost] = await Promise.all([
+      postId ? getPostLikeCount(postId).catch(() => 0) : Promise.resolve(0),
+      postId ? getPostCommentCount(postId).catch(() => 0) : Promise.resolve(0),
+      hydratePostObservation(feedPost),
     ])
-    const item = toFeedItem(post, likeCount, commentCount)
+
+    const item = toFeedItem(resolvedPost, likeCount, commentCount)
     if (item) list.push(item)
   }
 
   return {
     list,
-    total: filtered.length,
-    hasMore: start + slice.length < filtered.length,
+    total: filteredEntries.length,
+    hasMore: start + slice.length < filteredEntries.length,
   }
 }
 
@@ -234,11 +267,13 @@ export async function getObservationDetailRemote(
       updatedAt: obs.submittedAt,
     } as RemotePost)
 
-  const feedItem = toFeedItem(feedPost, likeCount, commentCount)
+  const resolvedPost = await hydratePostObservation(feedPost)
+  const feedItem = toFeedItem(resolvedPost, likeCount, commentCount)
   if (!feedItem) return null
 
   return {
     ...feedItem,
+    location_detail: feedItem.location_detail || parseLocationDetail(obs.location),
     time_full: formatFullTime(obs.submittedAt),
     liked,
     comments_enabled: post?.allowComment !== false,
@@ -287,7 +322,8 @@ export async function createObservationRemote(
     }).catch((err) => console.warn('create identification request failed:', err))
   }
 
-  const item = toFeedItem(post, 0, 0)
+  const resolvedPost = await hydratePostObservation(post)
+  const item = toFeedItem(resolvedPost, 0, 0)
   if (!item) throw new Error('创建观测记录失败')
   return item
 }

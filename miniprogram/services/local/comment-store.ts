@@ -54,3 +54,13 @@ export function softDeleteComment(commentId: string): ObservationComment | null 
   setLocalItem(COMMENTS_KEY, all)
   return all[index]
 }
+
+export function restoreComment(commentId: string): ObservationComment | null {
+  const all = getAllComments()
+  const index = all.findIndex((item) => item.comment_id === commentId)
+  if (index < 0 || all[index].status !== 'deleted') return null
+
+  all[index] = { ...all[index], status: 'active' }
+  setLocalItem(COMMENTS_KEY, all)
+  return all[index]
+}

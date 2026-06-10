@@ -8,6 +8,8 @@
     "pages/publish/select-location/select-location",
     "pages/detail/detail",
     "pages/profile/profile",
+    "pages/profile/notifications/notifications",
+    "pages/profile/records/records",
     "pages/species/species",
     "pages/admin/users/users",
     "pages/admin/moderation/moderation",

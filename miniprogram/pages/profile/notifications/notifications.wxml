@@ -1,0 +1,48 @@
+<navigation-bar extClass="nav-bar-slot" title="全部通知" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<scroll-view class="page" scroll-y type="list">
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <block wx:else>
+    <view class="section-header" wx:if="{{notifications.length > 0}}">
+      <text class="section-summary">共 {{notifications.length}} 条</text>
+      <view class="notification-actions">
+        <text
+          class="notification-action-btn {{unreadCount > 0 ? '' : 'disabled'}}"
+          bindtap="onMarkAllNotificationsRead"
+        >一键已读</text>
+        <text class="notification-action-divider">|</text>
+        <text class="notification-action-btn danger" bindtap="onClearAllNotifications">一键清空</text>
+      </view>
+    </view>
+
+    <view
+      class="notification-item {{item.is_read ? '' : 'unread'}}"
+      wx:for="{{notifications}}"
+      wx:key="notification_id"
+      data-id="{{item.notification_id}}"
+      data-obs-id="{{item.obs_id}}"
+      data-type="{{item.type}}"
+      bindtap="onNotificationTap"
+    >
+      <view class="notification-icon">{{item.type_icon}}</view>
+      <view class="notification-body">
+        <view class="notification-top">
+          <text class="notification-type">{{item.type_label}}</text>
+          <text class="notification-time">{{item.time_text}}</text>
+        </view>
+        <text class="notification-title">{{item.title}}</text>
+        <text class="notification-content">{{item.content}}</text>
+      </view>
+      <view class="notification-dot" wx:if="{{!item.is_read}}"></view>
+    </view>
+
+    <view class="empty-block" wx:if="{{notifications.length === 0}}">
+      <text class="empty-icon">🔔</text>
+      <text class="empty-title">暂无新消息</text>
+      <text class="empty-desc">鉴定结果与评论互动会在这里提醒你</text>
+    </view>
+  </block>
+</scroll-view>

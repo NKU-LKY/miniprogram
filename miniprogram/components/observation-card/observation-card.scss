@@ -70,19 +70,20 @@
 
 .location {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.location-icon {
-  font-size: 22rpx;
-  margin-right: 6rpx;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
 }
 
 .location-text,
 .species {
+  display: block;
+  width: 100%;
   font-size: 24rpx;
   color: #7a9a7b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .footer {

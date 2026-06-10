@@ -1,8 +1,8 @@
 import { getUserProfile } from '../../services/api/profile'
 import {
-  clearAllNotifications,
+  ensureAdminAppealNotifications,
+  ensureUserAppealResultNotifications,
   listUserNotifications,
-  readAllNotifications,
   readNotification,
 } from '../../services/api/notification'
 import {
@@ -13,6 +13,7 @@ import {
 } from '../../utils/observation-diary'
 import { canPublishObservation } from '../../utils/permissions'
 import { getCurrentUser } from '../../utils/session'
+import type { UserProfileData } from '../../services/api/profile'
 
 interface NotificationView {
   notification_id: string
@@ -64,7 +65,14 @@ interface DiaryMonthLabelView {
   week_index: number
 }
 
+const PREVIEW_LIMIT = 3
+
+let loadSeq = 0
+
 Page({
+  _profileReady: false,
+  _pageLoading: false,
+
   data: {
     loading: true,
     unavailable: false,
@@ -74,10 +82,11 @@ Page({
     shareCount: 0,
     totalLikes: 0,
     speciesCount: 0,
-    records: [] as RecordView[],
+    previewRecords: [] as RecordView[],
     speciesList: [] as SpeciesView[],
     isObserver: false,
-    notifications: [] as NotificationView[],
+    previewNotifications: [] as NotificationView[],
+    notificationTotal: 0,
     unreadCount: 0,
     diaryWeeks: [] as DiaryWeekView[],
     diaryMonthLabels: [] as DiaryMonthLabelView[],
@@ -94,93 +103,211 @@ Page({
       wx.redirectTo({ url: '/pages/login/login' })
       return
     }
-    this.loadProfile(user.user_id)
-    this.refreshNotifications(user.user_id)
+
+    if (this._profileReady) {
+      this.loadNotifications(user.user_id)
+      return
+    }
+
+    if (this._pageLoading) return
+    this.loadPage(user.user_id)
   },
 
-  refreshNotifications(userId: string) {
-    listUserNotifications(userId).then((notifications) => {
-      this.setData(this.buildNotificationDataFromList(notifications))
-    })
+  onRetryLoad() {
+    const user = getCurrentUser()
+    if (!user) {
+      wx.redirectTo({ url: '/pages/login/login' })
+      return
+    }
+    this._profileReady = false
+    this._pageLoading = false
+    loadSeq += 1
+    this.loadPage(user.user_id)
   },
 
-  loadProfile(userId: string) {
-    this.setData({ loading: true, unavailable: false })
+  markUnavailable() {
+    if (this._profileReady) return
+    this.setData({ loading: false, unavailable: true })
+  },
 
-    getUserProfile(userId)
+  loadPage(userId: string) {
+    if (this._pageLoading) return
+
+    const seq = ++loadSeq
+    const sessionUser = getCurrentUser()
+    if (!sessionUser) {
+      wx.redirectTo({ url: '/pages/login/login' })
+      return
+    }
+
+    this._pageLoading = true
+    if (!this._profileReady) {
+      this.setData({ loading: true, unavailable: false })
+    }
+
+    getUserProfile(userId, sessionUser)
       .then((profile) => {
-        if (!profile) {
-          this.setData({ loading: false, unavailable: true })
+        if (seq !== loadSeq) return
+
+        try {
+          this.applyProfile(profile)
+          this._profileReady = true
+        } catch (err) {
+          console.error('applyProfile error:', err)
+          this.markUnavailable()
+          wx.showToast({ title: '加载失败，请重试', icon: 'none' })
           return
         }
 
-        return listUserNotifications(userId).then((notifications) => {
-          this.setData({
-            loading: false,
-            unavailable: false,
-            nickname: profile.nickname,
-            avatarUrl: profile.avatar_url,
-            roleLabel: profile.role_label,
-            shareCount: profile.stats.share_count,
-            totalLikes: profile.stats.total_likes,
-            speciesCount: profile.stats.species_count,
-            records: profile.records.map((item) => ({
-              obs_id: item.obs_id,
-              photo_url: item.photo_url,
-              note: item.note || '',
-              location_name: item.location_name,
-              species_name: item.species_name || '',
-              species_label: item.species_label || item.species_name || '',
-              status_label: item.status_label || '',
-              time_text: item.time_text,
-              like_count: item.like_count,
-              comment_count: item.comment_count,
-              is_featured: item.is_featured,
-            })),
-            speciesList: profile.species_list.map((item) => ({
-              species_name: item.species_name,
-              marker_label: item.marker_label,
-              record_count: item.record_count,
-              latest_time_text: item.latest_time_text,
-            })),
-            isObserver: canPublishObservation(getCurrentUser()),
-            ...this.buildNotificationDataFromList(notifications),
-            ...this.buildDiaryData(profile.diary),
-          })
-        })
+        this.loadNotifications(userId, seq)
+        setTimeout(() => {
+          if (seq === loadSeq) {
+            this.syncAppealNotifications(userId, seq)
+          }
+        }, 500)
       })
       .catch((err) => {
-        console.error('loadProfile error:', err)
+        if (seq !== loadSeq) return
+        console.error('loadPage error:', err)
+        this.markUnavailable()
         wx.showToast({ title: '加载失败，请重试', icon: 'none' })
-        this.setData({ loading: false, unavailable: true })
+      })
+      .finally(() => {
+        if (seq === loadSeq) {
+          this._pageLoading = false
+        }
       })
   },
 
-  buildNotificationDataFromList(notifications: Awaited<ReturnType<typeof listUserNotifications>>) {
-    return {
-      notifications: notifications.map((item) => ({
-        notification_id: item.notification_id,
-        type: item.type,
-        type_label: item.type_label,
-        type_icon: item.type_icon,
-        title: item.title,
-        content: item.content,
-        obs_id: item.obs_id || '',
-        is_read: item.is_read,
+  applyProfile(profile: UserProfileData) {
+    const diaryData = this.buildDiaryData(profile.diary)
+
+    this.setData({
+      loading: false,
+      unavailable: false,
+      nickname: profile.nickname,
+      avatarUrl: profile.avatar_url,
+      roleLabel: profile.role_label,
+      shareCount: profile.stats.share_count,
+      totalLikes: profile.stats.total_likes,
+      speciesCount: profile.stats.species_count,
+      previewRecords: (profile.records || []).slice(0, PREVIEW_LIMIT).map((item) => ({
+        obs_id: item.obs_id,
+        photo_url: item.photo_url,
+        note: item.note || '',
+        location_name: item.location_name,
+        species_name: item.species_name || '',
+        species_label: item.species_label || item.species_name || '',
+        status_label: item.status_label || '',
         time_text: item.time_text,
+        like_count: item.like_count,
+        comment_count: item.comment_count,
+        is_featured: item.is_featured,
       })),
-      unreadCount: notifications.filter((item) => !item.is_read).length,
+      speciesList: (profile.species_list || []).map((item) => ({
+        species_name: item.species_name,
+        marker_label: item.marker_label,
+        record_count: item.record_count,
+        latest_time_text: item.latest_time_text,
+      })),
+      isObserver: canPublishObservation(getCurrentUser()),
+      diaryWeeks: diaryData.diaryWeeks,
+      diaryMonthLabels: diaryData.diaryMonthLabels,
+      diaryWeekdayLabels: diaryData.diaryWeekdayLabels,
+      diaryTotalRecords: diaryData.diaryTotalRecords,
+      diaryActiveDays: diaryData.diaryActiveDays,
+      diaryChartWidth: diaryData.diaryChartWidth,
+      diaryScrollIntoView: '',
+    })
+
+    if (diaryData.diaryScrollIntoView) {
+      wx.nextTick(() => {
+        this.setData({ diaryScrollIntoView: diaryData.diaryScrollIntoView })
+      })
     }
   },
 
-  buildDiaryData(diary: ObservationDiary) {
+  loadNotifications(userId: string, seq = loadSeq) {
+    listUserNotifications(userId)
+      .then((notifications) => {
+        if (seq !== loadSeq && seq !== 0) return
+        this.setData(this.buildNotificationDataFromList(notifications))
+      })
+      .catch((err) => {
+        console.warn('loadNotifications failed:', err)
+      })
+  },
+
+  syncAppealNotifications(userId: string, seq = loadSeq) {
+    const user = getCurrentUser()
+    const syncTasks: Promise<void>[] = [
+      ensureUserAppealResultNotifications(userId).catch((err) => {
+        console.warn('ensureUserAppealResultNotifications failed:', err)
+      }),
+    ]
+    if (user && user.role === 'admin') {
+      syncTasks.push(
+        ensureAdminAppealNotifications(userId).catch((err) => {
+          console.warn('ensureAdminAppealNotifications failed:', err)
+        }),
+      )
+    }
+
+    Promise.all(syncTasks)
+      .then(() => listUserNotifications(userId))
+      .then((notifications) => {
+        if (seq !== loadSeq) return
+        this.setData(this.buildNotificationDataFromList(notifications))
+      })
+      .catch((err) => {
+        console.warn('syncAppealNotifications failed:', err)
+      })
+  },
+
+  refreshNotifications(userId: string) {
+    this.loadNotifications(userId, 0)
+    this.syncAppealNotifications(userId, loadSeq)
+  },
+
+  buildNotificationDataFromList(notifications: Awaited<ReturnType<typeof listUserNotifications>>) {
+    const list = (notifications || []).map((item) => ({
+      notification_id: item.notification_id,
+      type: item.type,
+      type_label: item.type_label,
+      type_icon: item.type_icon,
+      title: item.title,
+      content: item.content,
+      obs_id: item.obs_id || '',
+      is_read: item.is_read,
+      time_text: item.time_text,
+    }))
+    return {
+      previewNotifications: list.slice(0, PREVIEW_LIMIT),
+      notificationTotal: list.length,
+      unreadCount: list.filter((item) => !item.is_read).length,
+    }
+  },
+
+  buildDiaryData(diary: ObservationDiary | undefined) {
+    if (!diary || !Array.isArray(diary.weeks)) {
+      return {
+        diaryWeeks: [] as DiaryWeekView[],
+        diaryMonthLabels: [] as DiaryMonthLabelView[],
+        diaryWeekdayLabels: [] as string[],
+        diaryTotalRecords: 0,
+        diaryActiveDays: 0,
+        diaryChartWidth: 0,
+        diaryScrollIntoView: '',
+      }
+    }
+
     const weekCount = diary.weeks.length
     return {
       diaryWeeks: diary.weeks,
-      diaryMonthLabels: diary.month_labels,
-      diaryWeekdayLabels: diary.weekday_labels,
-      diaryTotalRecords: diary.total_records,
-      diaryActiveDays: diary.active_days,
+      diaryMonthLabels: diary.month_labels || [],
+      diaryWeekdayLabels: diary.weekday_labels || [],
+      diaryTotalRecords: diary.total_records || 0,
+      diaryActiveDays: diary.active_days || 0,
       diaryChartWidth: getDiaryChartWidth(weekCount),
       diaryScrollIntoView: getDiaryScrollIntoViewId(weekCount),
     }
@@ -207,33 +334,12 @@ Page({
     }
   },
 
-  onMarkAllNotificationsRead() {
-    const user = getCurrentUser()
-    if (!user || this.data.unreadCount <= 0) return
-
-    readAllNotifications(user.user_id).then(() => {
-      this.refreshNotifications(user.user_id)
-      wx.showToast({ title: '已全部标为已读', icon: 'success' })
-    })
+  onViewAllNotifications() {
+    wx.navigateTo({ url: '/pages/profile/notifications/notifications' })
   },
 
-  onClearAllNotifications() {
-    const user = getCurrentUser()
-    if (!user || this.data.notifications.length <= 0) return
-
-    wx.showModal({
-      title: '清空通知',
-      content: '确定清空全部消息通知吗？清空后无法恢复。',
-      confirmColor: '#c45c5c',
-      success: (res) => {
-        if (!res.confirm) return
-
-        clearAllNotifications(user.user_id).then(() => {
-          this.refreshNotifications(user.user_id)
-          wx.showToast({ title: '已清空', icon: 'success' })
-        })
-      },
-    })
+  onViewAllRecords() {
+    wx.navigateTo({ url: '/pages/profile/records/records' })
   },
 
   onGoPublish() {

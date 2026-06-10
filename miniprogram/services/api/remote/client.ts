@@ -37,12 +37,23 @@ export function request<T>(
   const url = `${API_BASE_URL}${path}${query ? buildQuery(query) : ''}`
 
   return new Promise((resolve, reject) => {
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      reject(new Error('请求超时，请稍后重试'))
+    }, 20000)
+
     wx.request({
       url,
       method,
       data,
       header: { 'Content-Type': 'application/json' },
+      timeout: 20000,
       success(res) {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
         const body = res.data as ApiEnvelope<T>
         if (res.statusCode >= 200 && res.statusCode < 300 && body && body.success) {
           resolve(body.data as T)
@@ -52,6 +63,9 @@ export function request<T>(
         reject(new Error(message))
       },
       fail(err) {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
         reject(new Error(err.errMsg || '网络请求失败'))
       },
     })

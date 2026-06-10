@@ -15,6 +15,7 @@ import { formatRelativeTime } from '../../../utils/time'
 import type {
   RemoteComment,
   RemoteIdentificationRequest,
+  RemoteLocation,
   RemoteNotification,
   RemoteObservation,
   RemotePost,
@@ -43,6 +44,9 @@ const NOTIFICATION_TYPE_META: Record<
   post_like: { type: 'comment', label: '帖子点赞', icon: '👍', title: '收到点赞' },
   comment_like: { type: 'comment', label: '评论点赞', icon: '👍', title: '评论被点赞' },
   system_notice: { type: 'observation_hidden', label: '系统通知', icon: '📢', title: '系统通知' },
+  appeal_received: { type: 'appeal_received', label: '隐藏申诉', icon: '📋', title: '收到隐藏申诉' },
+  appeal_approved: { type: 'appeal_approved', label: '申诉通过', icon: '✅', title: '申诉已通过' },
+  appeal_rejected: { type: 'appeal_rejected', label: '申诉驳回', icon: '❌', title: '申诉已驳回' },
 }
 
 export function toUserId(id: number | string | null | undefined): string {
@@ -68,6 +72,16 @@ export function mapRemoteUser(user: RemoteUser): SafeUser {
   }
 }
 
+/** 将后端地点 description 解析为前端地址备注 */
+export function parseLocationDetail(location?: RemoteLocation | null): string | undefined {
+  if (!location) return undefined
+  const detail = (location.description || '').trim()
+  if (!detail) return undefined
+  const name = (location.name || '').trim()
+  if (name && detail === name) return undefined
+  return detail
+}
+
 /** 将后端物种解析为前端「大类 + 备注」 */
 export function parseSpeciesFields(species: RemoteSpecies | null | undefined): {
   species_name?: string
@@ -76,12 +90,13 @@ export function parseSpeciesFields(species: RemoteSpecies | null | undefined): {
   if (!species) return {}
 
   const desc = (species.description || '').trim()
-  const name = species.speciesName.trim()
+  const name = (species.speciesName || '').trim()
+  if (!name && !desc) return {}
 
   if (desc && isValidSpeciesCategory(desc)) {
     return {
       species_name: desc,
-      species_remark: name !== desc ? name : undefined,
+      species_remark: name && name !== desc ? name : undefined,
     }
   }
 
@@ -89,15 +104,24 @@ export function parseSpeciesFields(species: RemoteSpecies | null | undefined): {
     return { species_name: name }
   }
 
-  const category = resolveSpeciesArchiveKey(name)
+  const category = resolveSpeciesArchiveKey(name || desc)
   if (category) {
+    const remark = name && name !== category ? name : desc && desc !== category ? desc : undefined
     return {
       species_name: category,
-      species_remark: name !== category ? name : undefined,
+      species_remark: remark,
     }
   }
 
-  return { species_name: '其他', species_remark: name }
+  if (name) {
+    return { species_name: '其他', species_remark: name }
+  }
+
+  if (desc) {
+    return { species_name: '其他', species_remark: desc }
+  }
+
+  return {}
 }
 
 /** 将前端物种类别/备注编码为后端 species 字段 */
@@ -123,6 +147,8 @@ export function encodeSpeciesPayload(
 export function mapObservationStatus(status: string, postStatus?: string): ObservationStatus {
   if (postStatus === 'deleted') return 'withdrawn'
   if (postStatus === 'banned') return 'rejected'
+  // 申诉通过后帖子已恢复公开，但观测 status 可能仍为 rejected
+  if (postStatus === 'published' && status === 'rejected') return 'approved'
   if (status === 'pending_review') return 'pending_review'
   if (status === 'needs_identification') return 'needs_identification'
   if (status === 'identified') return 'identified'
@@ -159,6 +185,7 @@ export function toFeedItem(
     photo_url: getObservationPhotoUrl(obs),
     note: obs.content || '',
     location_name: obs.location?.name || '',
+    location_detail: parseLocationDetail(obs.location),
     species_name: speciesFields.species_name,
     species_remark: speciesFields.species_remark,
     species_label: speciesLabel || undefined,
@@ -246,19 +273,40 @@ export function mapIdentificationQueueItem(
 }
 
 export function mapNotificationItem(notification: RemoteNotification): NotificationItem {
-  const meta = NOTIFICATION_TYPE_META[notification.type] || {
-    type: 'comment' as NotificationType,
-    label: '通知',
-    icon: '🔔',
-    title: '通知',
-  }
+  const content = notification.content || ''
+  const type = notification.type || ''
+  const isAdminAppealNotice =
+    type === 'appeal_received' ||
+    (type === 'system_notice' &&
+      (content.startsWith('收到隐藏申诉') || content.startsWith('收到申诉')))
+  const isAppealApprovedNotice = type === 'system_notice' && content.startsWith('你的申诉已通过')
+  const isAppealRejectedNotice = type === 'system_notice' && content.startsWith('你的申诉未通过')
+
+  const meta = isAdminAppealNotice
+    ? NOTIFICATION_TYPE_META.appeal_received
+    : isAppealApprovedNotice
+      ? NOTIFICATION_TYPE_META.appeal_approved
+      : isAppealRejectedNotice
+        ? NOTIFICATION_TYPE_META.appeal_rejected
+        : NOTIFICATION_TYPE_META[type] || {
+            type: 'comment' as NotificationType,
+            label: '通知',
+            icon: '🔔',
+            title: '通知',
+          }
 
   let obsId: string | undefined
   if (
-    notification.type.includes('observation') ||
-    notification.type.includes('identification') ||
-    notification.type === 'post_like' ||
-    notification.type === 'comment_post'
+    type.includes('observation') ||
+    type.includes('identification') ||
+    type === 'post_like' ||
+    type === 'comment_post' ||
+    type === 'comment_reply' ||
+    type === 'comment_like' ||
+    type === 'appeal_approved' ||
+    type === 'appeal_rejected' ||
+    isAppealApprovedNotice ||
+    isAppealRejectedNotice
   ) {
     obsId = notification.targetId ? toUserId(notification.targetId) : undefined
   }
@@ -271,9 +319,7 @@ export function mapNotificationItem(notification: RemoteNotification): Notificat
     title: meta.title,
     content: notification.content || '',
     obs_id: obsId,
-    comment_id: notification.type.includes('comment') && notification.targetId
-      ? toUserId(notification.targetId)
-      : undefined,
+    comment_id: undefined,
     is_read: notification.isRead,
     time_text: formatRelativeTime(notification.createdAt),
   }

@@ -63,13 +63,10 @@
     >
       <image class="list-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
       <view class="list-body">
-        <view class="list-top">
-          <text class="list-label">{{item.marker_label}}</text>
-          <text class="list-species">{{item.species_label || item.species_name || '待鉴定'}}</text>
-        </view>
         <text class="list-note">{{item.note || '暂无描述'}}</text>
+        <text class="list-location">📍 {{item.location_name}}</text>
+        <text class="list-species">🌿 {{item.species_label || item.species_name || '待鉴定'}}</text>
         <view class="list-meta">
-          <text class="list-location">📍 {{item.location_name}}</text>
           <text class="list-time">{{item.time_text}}</text>
         </view>
       </view>
@@ -131,11 +128,9 @@
       >
         <image class="sheet-record-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
         <view class="sheet-record-body">
-          <view class="sheet-record-top">
-            <text class="sheet-record-label">{{item.marker_label}}</text>
-            <text class="sheet-record-species">{{item.species_label || item.species_name || '待鉴定'}}</text>
-          </view>
           <text class="sheet-record-note">{{item.note || '暂无描述'}}</text>
+          <text class="sheet-record-location">📍 {{item.location_name}}</text>
+          <text class="sheet-record-species">🌿 {{item.species_label || item.species_name || '待鉴定'}}</text>
           <text class="sheet-record-time">{{item.time_text}}</text>
         </view>
         <text class="sheet-record-arrow">›</text>

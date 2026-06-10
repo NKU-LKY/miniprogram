@@ -1,0 +1,50 @@
+<navigation-bar extClass="nav-bar-slot" title="全部记录" back="{{true}}" color="black" background="#F5F9F0"></navigation-bar>
+
+<scroll-view class="page" scroll-y type="list">
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="unavailable" wx:elif="{{unavailable}}">
+    <text class="unavailable-icon">😕</text>
+    <text class="unavailable-title">无法加载记录</text>
+    <text class="unavailable-desc">请检查网络后重试</text>
+  </view>
+
+  <block wx:else>
+    <text class="section-summary" wx:if="{{records.length > 0}}">共 {{records.length}} 条分享</text>
+
+    <view
+      class="record-card"
+      wx:for="{{records}}"
+      wx:key="obs_id"
+      data-id="{{item.obs_id}}"
+      bindtap="onCardTap"
+    >
+      <image class="record-thumb" src="{{item.photo_url}}" mode="aspectFill"></image>
+      <view class="featured-badge" wx:if="{{item.is_featured}}">⭐ 精选</view>
+      <view class="record-body">
+        <view class="record-top">
+          <text class="status-tag" wx:if="{{item.status_label}}">{{item.status_label}}</text>
+          <text class="record-time">{{item.time_text}}</text>
+        </view>
+        <text class="record-note">{{item.note || '暂无描述'}}</text>
+        <view class="record-bottom">
+          <text class="record-location">📍 {{item.location_name}}<text wx:if="{{item.location_detail}}"> · {{item.location_detail}}</text></text>
+          <text class="record-species" wx:if="{{item.species_label}}">🌿 {{item.species_label}}</text>
+        </view>
+        <view class="record-stats">
+          <text class="stat-text">♥ {{item.like_count}}</text>
+          <text class="stat-text">💬 {{item.comment_count}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-block" wx:if="{{records.length === 0}}">
+      <text class="empty-icon">📷</text>
+      <text class="empty-title">你还没有分享过观测记录</text>
+      <text class="empty-desc">发布第一条发现，解锁你的校园图鉴</text>
+      <button wx:if="{{isObserver}}" class="empty-btn" bindtap="onGoPublish">去发布</button>
+    </view>
+  </block>
+</scroll-view>

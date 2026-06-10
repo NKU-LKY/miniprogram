@@ -21,10 +21,10 @@ export interface RemoteLocation {
 }
 
 export interface RemoteSpecies {
-  speciesId: number
-  speciesName: string
+  speciesId: number | null
+  speciesName?: string | null
   description: string | null
-  createdAt: string
+  createdAt?: string
 }
 
 export interface RemotePhoto {

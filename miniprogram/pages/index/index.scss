@@ -461,18 +461,21 @@ page {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
   overflow: hidden;
 }
 
 .location-text,
 .species-text {
+  display: block;
+  width: 100%;
   font-size: 22rpx;
   color: #7a9a7b;
-}
-
-.species-text {
-  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .obs-stats {

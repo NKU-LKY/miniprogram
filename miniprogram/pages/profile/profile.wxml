@@ -8,6 +8,8 @@
   <view class="unavailable" wx:elif="{{unavailable}}">
     <text class="unavailable-icon">😕</text>
     <text class="unavailable-title">无法加载个人信息</text>
+    <text class="unavailable-desc">请检查网络后重试，或重新登录</text>
+    <button class="unavailable-btn" bindtap="onRetryLoad">重新加载</button>
   </view>
 
   <block wx:else>
@@ -110,19 +112,16 @@
           <text class="section-title">消息通知</text>
           <view class="unread-badge" wx:if="{{unreadCount > 0}}">{{unreadCount}}</view>
         </view>
-        <view class="notification-actions" wx:if="{{notifications.length > 0}}">
-          <text
-            class="notification-action-btn {{unreadCount > 0 ? '' : 'disabled'}}"
-            bindtap="onMarkAllNotificationsRead"
-          >一键已读</text>
-          <text class="notification-action-divider">|</text>
-          <text class="notification-action-btn danger" bindtap="onClearAllNotifications">一键清空</text>
-        </view>
+        <text
+          class="section-more-link"
+          wx:if="{{notificationTotal > 0}}"
+          bindtap="onViewAllNotifications"
+        >全部通知 ›</text>
       </view>
 
       <view
         class="notification-item {{item.is_read ? '' : 'unread'}}"
-        wx:for="{{notifications}}"
+        wx:for="{{previewNotifications}}"
         wx:key="notification_id"
         data-id="{{item.notification_id}}"
         data-obs-id="{{item.obs_id}}"
@@ -141,7 +140,7 @@
         <view class="notification-dot" wx:if="{{!item.is_read}}"></view>
       </view>
 
-      <view class="empty-block compact" wx:if="{{notifications.length === 0}}">
+      <view class="empty-block compact" wx:if="{{notificationTotal === 0}}">
         <text class="empty-icon">🔔</text>
         <text class="empty-title">暂无新消息</text>
         <text class="empty-desc">鉴定结果与评论互动会在这里提醒你</text>
@@ -149,11 +148,18 @@
     </view>
 
     <view class="section">
-      <text class="section-title">我的分享</text>
+      <view class="section-header">
+        <text class="section-title">我的分享</text>
+        <text
+          class="section-more-link"
+          wx:if="{{shareCount > 0}}"
+          bindtap="onViewAllRecords"
+        >全部记录 ›</text>
+      </view>
 
       <view
         class="record-card"
-        wx:for="{{records}}"
+        wx:for="{{previewRecords}}"
         wx:key="obs_id"
         data-id="{{item.obs_id}}"
         bindtap="onCardTap"
@@ -167,8 +173,8 @@
           </view>
           <text class="record-note">{{item.note || '暂无描述'}}</text>
           <view class="record-bottom">
-            <text class="record-location">📍 {{item.location_name}}</text>
-            <text class="record-species" wx:if="{{item.species_label}}">· {{item.species_label}}</text>
+            <text class="record-location">📍 {{item.location_name}}<text wx:if="{{item.location_detail}}"> · {{item.location_detail}}</text></text>
+            <text class="record-species" wx:if="{{item.species_label}}">🌿 {{item.species_label}}</text>
           </view>
           <view class="record-stats">
             <text class="stat-text">♥ {{item.like_count}}</text>
@@ -177,7 +183,7 @@
         </view>
       </view>
 
-      <view class="empty-block" wx:if="{{records.length === 0}}">
+      <view class="empty-block" wx:if="{{shareCount === 0}}">
         <text class="empty-icon">📷</text>
         <text class="empty-title">你还没有分享过观测记录</text>
         <text class="empty-desc">发布第一条发现，解锁你的校园图鉴</text>

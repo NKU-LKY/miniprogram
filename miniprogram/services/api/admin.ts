@@ -4,6 +4,7 @@ import { requireAdmin } from '../../utils/permissions'
 import {
   approveAppealForAdmin as localApproveAppeal,
   hideCommentForAdmin as localHideComment,
+  restoreCommentForAdmin as localRestoreComment,
   hideObservationForAdmin as localHideObservation,
   listAppealsForModeration as localListAppeals,
   listCommentsForModeration as localListComments,
@@ -21,13 +22,17 @@ import {
 import { USE_LOCAL_BACKEND } from './config'
 import {
   approveAppealRemote,
-  hideCommentForAdminRemote,
-  hideObservationForAdminRemote,
   listAppealsForModerationRemote,
+  rejectAppealRemote,
+} from './remote/appeal'
+import {
+  countPendingAppealsRemote,
+  hideCommentForAdminRemote,
+  restoreCommentForAdminRemote,
+  hideObservationForAdminRemote,
   listCommentsForModerationRemote,
   listObservationsForModerationRemote,
   listUsersForAdminRemote,
-  rejectAppealRemote,
   restoreObservationForAdminRemote,
   setObservationFeaturedForAdminRemote,
   setUserBanForAdminRemote,
@@ -61,13 +66,27 @@ export function setUserBanForAdmin(targetUserId: string, banned: boolean): Promi
 }
 
 export function listObservationsForModeration(): Promise<ModerationObsItem[] | { error: string }> {
+  if (!requireAdmin()) return Promise.resolve({ error: '无权限访问' })
+
   if (!USE_LOCAL_BACKEND) {
     return listObservationsForModerationRemote().catch(() => ({ error: '加载失败' }))
   }
   return Promise.resolve(localListObservations())
 }
 
+export function countPendingAppealsForModeration(): Promise<number> {
+  if (!requireAdmin()) return Promise.resolve(0)
+
+  if (!USE_LOCAL_BACKEND) {
+    return countPendingAppealsRemote()
+  }
+  const result = localListAppeals()
+  return Promise.resolve(Array.isArray(result) ? result.length : 0)
+}
+
 export function listCommentsForModeration(): Promise<ModerationCommentItem[] | { error: string }> {
+  if (!requireAdmin()) return Promise.resolve({ error: '无权限访问' })
+
   if (!USE_LOCAL_BACKEND) {
     return listCommentsForModerationRemote().catch(() => ({ error: '加载失败' }))
   }
@@ -75,8 +94,11 @@ export function listCommentsForModeration(): Promise<ModerationCommentItem[] | {
 }
 
 export function hideObservationForAdmin(obsId: string): Promise<AdminActionResult> {
+  const admin = requireAdmin()
+  if (!admin) return Promise.resolve({ success: false, message: '无权限操作' })
+
   if (!USE_LOCAL_BACKEND) {
-    return hideObservationForAdminRemote(obsId)
+    return hideObservationForAdminRemote(obsId, admin.user_id)
   }
   return Promise.resolve(localHideObservation(obsId))
 }
@@ -99,35 +121,56 @@ export function setObservationFeaturedForAdmin(
 }
 
 export function hideCommentForAdmin(commentId: string): Promise<AdminActionResult> {
+  const admin = requireAdmin()
+  if (!admin) return Promise.resolve({ success: false, message: '无权限操作' })
+
   if (!USE_LOCAL_BACKEND) {
     return hideCommentForAdminRemote(commentId)
   }
   return Promise.resolve(localHideComment(commentId))
 }
 
+export function restoreCommentForAdmin(commentId: string): Promise<AdminActionResult> {
+  const admin = requireAdmin()
+  if (!admin) return Promise.resolve({ success: false, message: '无权限操作' })
+
+  if (!USE_LOCAL_BACKEND) {
+    return restoreCommentForAdminRemote(commentId)
+  }
+  return Promise.resolve(localRestoreComment(commentId))
+}
+
 export function listAppealsForModeration(): Promise<ModerationAppealItem[] | { error: string }> {
+  if (!requireAdmin()) return Promise.resolve({ error: '无权限访问' })
+
   if (!USE_LOCAL_BACKEND) {
     return listAppealsForModerationRemote().catch(() => ({ error: '加载失败' }))
   }
   return Promise.resolve(localListAppeals())
 }
 
-export function approveAppealForAdmin(appealId: string): Promise<AdminActionResult> {
+export function approveAppealForAdmin(
+  appealId: string,
+  context?: { ownerUserId?: string; obsId?: string },
+): Promise<AdminActionResult> {
   const admin = requireAdmin()
   if (!admin) return Promise.resolve({ success: false, message: '无权限操作' })
 
   if (!USE_LOCAL_BACKEND) {
-    return approveAppealRemote(appealId, admin.user_id)
+    return approveAppealRemote(appealId, admin.user_id, context)
   }
   return Promise.resolve(localApproveAppeal(appealId))
 }
 
-export function rejectAppealForAdmin(appealId: string): Promise<AdminActionResult> {
+export function rejectAppealForAdmin(
+  appealId: string,
+  context?: { ownerUserId?: string; obsId?: string },
+): Promise<AdminActionResult> {
   const admin = requireAdmin()
   if (!admin) return Promise.resolve({ success: false, message: '无权限操作' })
 
   if (!USE_LOCAL_BACKEND) {
-    return rejectAppealRemote(appealId, admin.user_id)
+    return rejectAppealRemote(appealId, admin.user_id, context)
   }
   return Promise.resolve(localRejectAppeal(appealId))
 }

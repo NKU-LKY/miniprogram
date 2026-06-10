@@ -3,6 +3,7 @@ import { ROLE_LABELS, STATUS_LABELS, type AdminUserListItem, type UserRole } fro
 import type { ObservationStatus } from '../../../types/observation'
 import { formatRelativeTime } from '../../../utils/time'
 import { request } from './client'
+import { notifyObservationHiddenRemote } from './notification'
 import {
   getObservationPhotoUrl,
   mapObservationStatus,
@@ -11,12 +12,7 @@ import {
   toUserId,
 } from './mappers'
 import { getPostByObsId } from './post'
-import type { PaginatedResult, RemoteComment, RemotePost, RemoteUser } from './types'
-import {
-  approveAppealRemote,
-  listAppealsForModerationRemote,
-  rejectAppealRemote,
-} from './appeal'
+import type { PaginatedResult, RemoteAppeal, RemoteComment, RemotePost, RemoteUser } from './types'
 
 export interface ModerationObsItem {
   obs_id: string
@@ -37,6 +33,8 @@ export interface ModerationCommentItem {
   content: string
   author_nickname: string
   time_text: string
+  is_hidden: boolean
+  status_label?: string
 }
 
 export interface AdminActionResult {
@@ -106,15 +104,31 @@ export async function setUserBanForAdminRemote(
   }
 }
 
+export async function countPendingAppealsRemote(): Promise<number> {
+  try {
+    const result = await request<PaginatedResult<RemoteAppeal>>('/api/appeals', {
+      query: { page: 1, pageSize: 1, status: 'pending' },
+    })
+    return result.total ?? result.list?.length ?? 0
+  } catch {
+    return 0
+  }
+}
+
 export async function listObservationsForModerationRemote(): Promise<ModerationObsItem[]> {
-  const posts = await request<PaginatedResult<RemotePost>>('/api/posts', {
-    query: { page: 1, pageSize: 200, sortBy: 'created_at', order: 'DESC' },
-  })
+  const [posts, appealsResult] = await Promise.all([
+    request<PaginatedResult<RemotePost>>('/api/posts', {
+      query: { page: 1, pageSize: 200, sortBy: 'created_at', order: 'DESC' },
+    }),
+    request<PaginatedResult<RemoteAppeal>>('/api/appeals', {
+      query: { page: 1, pageSize: 100, status: 'pending' },
+    }).catch(() => ({ list: [] as RemoteAppeal[], total: 0, page: 1, pageSize: 100 })),
+  ])
 
-  const appeals = await listAppealsForModerationRemote()
-  const pendingAppealObsIds = new Set(appeals.map((a) => a.obs_id))
+  const pendingPostIds = new Set((appealsResult.list || []).map((appeal) => appeal.postId))
+  const postList = posts?.list || []
 
-  return posts.list
+  return postList
     .filter((post) => post.observation)
     .map((post) => {
       const obs = post.observation!
@@ -129,9 +143,29 @@ export async function listObservationsForModerationRemote(): Promise<ModerationO
         time_text: formatRelativeTime(obs.submittedAt),
         is_hidden: status === 'rejected' || status === 'pending_review',
         is_featured: post.priority > 0,
-        has_pending_appeal: pendingAppealObsIds.has(toUserId(obs.obsId)),
+        has_pending_appeal: pendingPostIds.has(post.postId),
       }
     })
+}
+
+function toModerationCommentItem(
+  comment: RemoteComment,
+  obsId: string,
+): ModerationCommentItem & { createdAt: string } {
+  const isHidden = comment.status !== 'visible'
+  const statusLabel =
+    comment.status === 'banned' ? '已隐藏' : comment.status === 'deleted' ? '已删除' : undefined
+
+  return {
+    comment_id: toUserId(comment.commentId),
+    obs_id: obsId,
+    content: comment.content,
+    author_nickname: comment.user?.nickname || '未知用户',
+    time_text: formatRelativeTime(comment.createdAt),
+    createdAt: comment.createdAt,
+    is_hidden: isHidden,
+    status_label: statusLabel,
+  }
 }
 
 export async function listCommentsForModerationRemote(): Promise<ModerationCommentItem[]> {
@@ -139,42 +173,43 @@ export async function listCommentsForModerationRemote(): Promise<ModerationComme
     query: { page: 1, pageSize: 50, status: 'published' },
   })
 
-  const comments: ModerationCommentItem[] = []
+  const postEntries = (posts?.list || [])
+    .filter((post) => post.observation)
+    .map((post) => ({
+      postId: post.postId,
+      obsId: toUserId(post.observation!.obsId),
+    }))
 
-  for (const post of posts.list) {
-    if (!post.observation) continue
-    const obsId = toUserId(post.observation.obsId)
-    const result = await request<PaginatedResult<RemoteComment>>(
-      `/api/comments/by-post/${post.postId}`,
-      { query: { page: 1, pageSize: 50, status: 'visible' } },
-    ).catch(() => ({ list: [] as RemoteComment[], total: 0, page: 1, pageSize: 50 }))
-
-    result.list.forEach((comment) => {
-      comments.push({
-        comment_id: toUserId(comment.commentId),
-        obs_id: obsId,
-        content: comment.content,
-        author_nickname: comment.user?.nickname || '未知用户',
-        time_text: formatRelativeTime(comment.createdAt),
+  const commentGroups = await Promise.all(
+    postEntries.map(({ postId, obsId }) =>
+      request<PaginatedResult<RemoteComment>>(`/api/comments/by-post/${postId}`, {
+        query: { page: 1, pageSize: 50 },
       })
+        .catch(() => ({ list: [] as RemoteComment[], total: 0, page: 1, pageSize: 50 }))
+        .then((result) => ({ obsId, result })),
+    ),
+  )
+
+  const comments: Array<ModerationCommentItem & { createdAt: string }> = []
+
+  commentGroups.forEach(({ obsId, result }) => {
+    result.list.forEach((comment) => {
+      comments.push(toModerationCommentItem(comment, obsId))
       ;(comment.children || []).forEach((child) => {
-        comments.push({
-          comment_id: toUserId(child.commentId),
-          obs_id: obsId,
-          content: child.content,
-          author_nickname: child.user?.nickname || '未知用户',
-          time_text: formatRelativeTime(child.createdAt),
-        })
+        comments.push(toModerationCommentItem(child, obsId))
       })
     })
-  }
+  })
 
-  return comments.sort(
-    (a, b) => new Date(b.time_text).getTime() - new Date(a.time_text).getTime(),
-  )
+  return comments
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .map(({ createdAt: _createdAt, ...item }) => item)
 }
 
-export async function hideObservationForAdminRemote(obsId: string): Promise<AdminActionResult> {
+export async function hideObservationForAdminRemote(
+  obsId: string,
+  adminUserId: string,
+): Promise<AdminActionResult> {
   try {
     const post = await getPostByObsId(obsId)
     if (post) {
@@ -185,8 +220,18 @@ export async function hideObservationForAdminRemote(obsId: string): Promise<Admi
     }
     await request(`/api/observations/${obsId}/status`, {
       method: 'PATCH',
-      data: { status: 'rejected', userId: 1 },
+      data: { status: 'rejected', userId: toRemoteUserId(adminUserId) },
     })
+
+    const ownerId = post?.observation?.user?.userId
+    if (ownerId) {
+      void notifyObservationHiddenRemote({
+        ownerUserId: ownerId,
+        adminUserId,
+        obsId,
+      }).catch((err) => console.warn('create observation hidden notification failed:', err))
+    }
+
     return { success: true }
   } catch (err) {
     return { success: false, message: err instanceof Error ? err.message : '操作失败' }
@@ -235,6 +280,18 @@ export async function hideCommentForAdminRemote(commentId: string): Promise<Admi
     await request(`/api/comments/${commentId}`, {
       method: 'PUT',
       data: { status: 'banned' },
+    })
+    return { success: true }
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : '操作失败' }
+  }
+}
+
+export async function restoreCommentForAdminRemote(commentId: string): Promise<AdminActionResult> {
+  try {
+    await request(`/api/comments/${commentId}`, {
+      method: 'PUT',
+      data: { status: 'visible' },
     })
     return { success: true }
   } catch (err) {
