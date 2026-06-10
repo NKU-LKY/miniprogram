@@ -1,27 +1,25 @@
 import {
+  createObservationComment,
   getObservationDetail,
+  listObservationCommentThreads,
   setObservationCommentsEnabled,
+  toggleObservationLike,
   withdrawObservation,
-} from '../../services/local/observation-api'
-import { getOwnerAppealForObs, submitObservationAppeal } from '../../services/local/appeal-api'
+} from '../../services/api/observation'
+import { getOwnerAppealForObs, submitObservationAppeal } from '../../services/api/appeal'
 import {
   claimIdentification,
   completeIdentification,
   getIdentificationState,
   releaseIdentification,
-} from '../../services/local/identification-api'
-import {
-  createObservationComment,
-  listObservationCommentThreads,
-  toggleObservationLike,
-} from '../../services/local/interaction-api'
+} from '../../services/api/identification'
 import { validateCommentContent } from '../../utils/content-filter'
 import {
   hideCommentForAdmin,
   hideObservationForAdmin,
   restoreObservationForAdmin,
   setObservationFeaturedForAdmin,
-} from '../../services/local/admin-api'
+} from '../../services/api/admin'
 import type { ObservationCommentThreadItem } from '../../types/comment'
 import type { ObservationDetailItem } from '../../types/observation'
 import { getSpeciesCategoryIndex, SPECIES_CATEGORIES } from '../../data/species-categories'
@@ -207,57 +205,60 @@ Page({
   loadDetail(obsId: string) {
     this.setData({ loading: true, unavailable: false })
 
-    try {
-      const user = getCurrentUser()
-      const result = getObservationDetail(obsId, user && user.user_id)
-      if (!result) {
-        this.setData({ loading: false, unavailable: true, detail: null, comments: [] })
-        return
-      }
+    const user = getCurrentUser()
+    getObservationDetail(obsId, user && user.user_id)
+      .then(async (result) => {
+        if (!result) {
+          this.setData({ loading: false, unavailable: true, detail: null, comments: [] })
+          return
+        }
 
-      const isReviewer = Boolean(user && canIdentifySpecies(user))
-      const identificationState =
-        isReviewer && user && result.status === 'needs_identification'
-          ? getIdentificationState(obsId, user.user_id)
-          : null
+        const isReviewer = Boolean(user && canIdentifySpecies(user))
+        const identificationState =
+          isReviewer && user && result.status === 'needs_identification'
+            ? await getIdentificationState(obsId, user.user_id)
+            : null
 
-      const isOwner = Boolean(user && result.publisher.user_id === user.user_id)
-      const isRejected = result.status === 'rejected'
-      const ownerAppeal =
-        isOwner && isRejected && user ? getOwnerAppealForObs(obsId, user.user_id) : null
-      const canSubmitAppeal = Boolean(
-        isOwner && isRejected && (!ownerAppeal || ownerAppeal.status === 'rejected'),
-      )
+        const isOwner = Boolean(user && result.publisher.user_id === user.user_id)
+        const isRejected = result.status === 'rejected'
+        const ownerAppeal =
+          isOwner && isRejected && user
+            ? await getOwnerAppealForObs(obsId, user.user_id)
+            : null
+        const canSubmitAppeal = Boolean(
+          isOwner && isRejected && (!ownerAppeal || ownerAppeal.status === 'rejected'),
+        )
 
-      this.setData({
-        loading: false,
-        unavailable: false,
-        detail: toDetailView(result),
-        comments: result.comments.map(toCommentThreadView),
-        isAdmin: Boolean(user && user.role === 'admin'),
-        isOwner,
-        commentsEnabled: result.comments_enabled,
-        isReviewer,
-        isHidden: result.status === 'rejected' || result.status === 'pending_review',
-        isFeatured: result.is_featured,
-        showIdentificationPanel: Boolean(identificationState),
-        identification: identificationState ? toIdentificationView(identificationState) : null,
-        speciesCategoryIndex: identificationState
-          ? getSpeciesCategoryIndex(identificationState.species_name)
-          : 0,
-        speciesCategoryName: identificationState?.species_name || '',
-        speciesRemarkInput: identificationState?.species_remark || '',
-        reviewNoteInput: '',
-        showAppealPanel: Boolean(isOwner && isRejected),
-        canSubmitAppeal,
-        appeal: ownerAppeal,
-        appealInput: '',
+        this.setData({
+          loading: false,
+          unavailable: false,
+          detail: toDetailView(result),
+          comments: result.comments.map(toCommentThreadView),
+          isAdmin: Boolean(user && user.role === 'admin'),
+          isOwner,
+          commentsEnabled: result.comments_enabled,
+          isReviewer,
+          isHidden: result.status === 'rejected' || result.status === 'pending_review',
+          isFeatured: result.is_featured,
+          showIdentificationPanel: Boolean(identificationState),
+          identification: identificationState ? toIdentificationView(identificationState) : null,
+          speciesCategoryIndex: identificationState
+            ? getSpeciesCategoryIndex(identificationState.species_name)
+            : 0,
+          speciesCategoryName: identificationState?.species_name || '',
+          speciesRemarkInput: identificationState?.species_remark || '',
+          reviewNoteInput: '',
+          showAppealPanel: Boolean(isOwner && isRejected),
+          canSubmitAppeal,
+          appeal: ownerAppeal,
+          appealInput: '',
+        })
       })
-    } catch (err) {
-      console.error('loadDetail error:', err)
-      wx.showToast({ title: '加载失败，请重试', icon: 'none' })
-      this.setData({ loading: false, unavailable: true, detail: null, comments: [] })
-    }
+      .catch((err) => {
+        console.error('loadDetail error:', err)
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+        this.setData({ loading: false, unavailable: true, detail: null, comments: [] })
+      })
   },
 
   onPreviewPhoto() {
@@ -277,23 +278,25 @@ Page({
 
     this.setData({ liking: true })
 
-    try {
-      const result = toggleObservationLike(this.data.obsId, user.user_id)
-      if (!result) {
-        wx.showToast({ title: '操作失败', icon: 'none' })
-        return
-      }
+    toggleObservationLike(this.data.obsId, user.user_id)
+      .then((result) => {
+        if (!result) {
+          wx.showToast({ title: '操作失败', icon: 'none' })
+          return
+        }
 
-      this.setData({
-        'detail.liked': result.liked,
-        'detail.like_count': result.like_count,
+        this.setData({
+          'detail.liked': result.liked,
+          'detail.like_count': result.like_count,
+        })
       })
-    } catch (err) {
-      console.error('toggleLike error:', err)
-      wx.showToast({ title: '操作失败，请重试', icon: 'none' })
-    } finally {
-      this.setData({ liking: false })
-    }
+      .catch((err) => {
+        console.error('toggleLike error:', err)
+        wx.showToast({ title: '操作失败，请重试', icon: 'none' })
+      })
+      .finally(() => {
+        this.setData({ liking: false })
+      })
   },
 
   onCommentInput(e: WechatMiniprogram.Input) {
@@ -340,28 +343,33 @@ Page({
 
     this.setData({ submitting: true })
 
-    try {
-      const replyToCommentId = this.data.replyTarget ? this.data.replyTarget.comment_id : undefined
-      const result = createObservationComment(this.data.obsId, user.user_id, content, replyToCommentId)
-      if ('error' in result) {
-        wx.showToast({ title: result.error, icon: 'none' })
-        return
-      }
+    const replyToCommentId = this.data.replyTarget ? this.data.replyTarget.comment_id : undefined
 
-      this.setData({
-        comments: listObservationCommentThreads(this.data.obsId).map(toCommentThreadView),
-        commentInput: '',
-        replyTarget: null,
-        commentPlaceholder: '说点什么……',
-        'detail.comment_count': result.comment_count,
+    createObservationComment(this.data.obsId, user.user_id, content, replyToCommentId)
+      .then((result) => {
+        if ('error' in result) {
+          wx.showToast({ title: result.error, icon: 'none' })
+          return
+        }
+
+        return listObservationCommentThreads(this.data.obsId).then((threads) => {
+          this.setData({
+            comments: threads.map(toCommentThreadView),
+            commentInput: '',
+            replyTarget: null,
+            commentPlaceholder: '说点什么……',
+            'detail.comment_count': result.comment_count,
+          })
+          wx.showToast({ title: '评论成功', icon: 'success' })
+        })
       })
-      wx.showToast({ title: '评论成功', icon: 'success' })
-    } catch (err) {
-      console.error('submitComment error:', err)
-      wx.showToast({ title: '发送失败，请重试', icon: 'none' })
-    } finally {
-      this.setData({ submitting: false })
-    }
+      .catch((err) => {
+        console.error('submitComment error:', err)
+        wx.showToast({ title: '发送失败，请重试', icon: 'none' })
+      })
+      .finally(() => {
+        this.setData({ submitting: false })
+      })
   },
 
   onToggleComments() {
@@ -382,23 +390,24 @@ Page({
       success: (res) => {
         if (!res.confirm) return
 
-        try {
-          const result = setObservationCommentsEnabled(obsId, user.user_id, enabling)
-          if (!result.success) {
-            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-            return
-          }
+        setObservationCommentsEnabled(obsId, user.user_id, enabling)
+          .then((result) => {
+            if (!result.success) {
+              wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+              return
+            }
 
-          this.setData({
-            commentsEnabled: result.comments_enabled !== false,
-            replyTarget: null,
-            commentPlaceholder: '说点什么……',
+            this.setData({
+              commentsEnabled: result.comments_enabled !== false,
+              replyTarget: null,
+              commentPlaceholder: '说点什么……',
+            })
+            wx.showToast({ title: enabling ? '评论区已开启' : '评论区已关闭', icon: 'success' })
           })
-          wx.showToast({ title: enabling ? '评论区已开启' : '评论区已关闭', icon: 'success' })
-        } catch (err) {
-          console.error('onToggleComments error:', err)
-          wx.showToast({ title: '操作失败，请重试', icon: 'none' })
-        }
+          .catch((err) => {
+            console.error('onToggleComments error:', err)
+            wx.showToast({ title: '操作失败，请重试', icon: 'none' })
+          })
       },
     })
   },
@@ -420,24 +429,25 @@ Page({
       success: (res) => {
         if (!res.confirm) return
 
-        try {
-          const result = withdrawObservation(obsId, userId)
-          if (!result.success) {
-            wx.showToast({ title: result.message || '撤回失败', icon: 'none' })
-            return
-          }
-          wx.showToast({ title: '已撤回', icon: 'success' })
-          setTimeout(() => {
-            wx.navigateBack({
-              fail: () => {
-                wx.reLaunch({ url: '/pages/index/index' })
-              },
-            })
-          }, 500)
-        } catch (err) {
-          console.error('onWithdrawObservation error:', err)
-          wx.showToast({ title: '撤回失败，请重试', icon: 'none' })
-        }
+        withdrawObservation(obsId, userId)
+          .then((result) => {
+            if (!result.success) {
+              wx.showToast({ title: result.message || '撤回失败', icon: 'none' })
+              return
+            }
+            wx.showToast({ title: '已撤回', icon: 'success' })
+            setTimeout(() => {
+              wx.navigateBack({
+                fail: () => {
+                  wx.reLaunch({ url: '/pages/index/index' })
+                },
+              })
+            }, 500)
+          })
+          .catch((err) => {
+            console.error('onWithdrawObservation error:', err)
+            wx.showToast({ title: '撤回失败，请重试', icon: 'none' })
+          })
       },
     })
   },
@@ -449,13 +459,14 @@ Page({
       confirmColor: '#c45c5c',
       success: (res) => {
         if (!res.confirm) return
-        const result = hideObservationForAdmin(this.data.obsId)
-        if (!result.success) {
-          wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-          return
-        }
-        wx.showToast({ title: '已隐藏', icon: 'success' })
-        this.loadDetail(this.data.obsId)
+        hideObservationForAdmin(this.data.obsId).then((result) => {
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
+          wx.showToast({ title: '已隐藏', icon: 'success' })
+          this.loadDetail(this.data.obsId)
+        })
       },
     })
   },
@@ -467,13 +478,14 @@ Page({
       confirmColor: '#4c8c4a',
       success: (res) => {
         if (!res.confirm) return
-        const result = restoreObservationForAdmin(this.data.obsId)
-        if (!result.success) {
-          wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-          return
-        }
-        wx.showToast({ title: '已恢复', icon: 'success' })
-        this.loadDetail(this.data.obsId)
+        restoreObservationForAdmin(this.data.obsId).then((result) => {
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
+          wx.showToast({ title: '已恢复', icon: 'success' })
+          this.loadDetail(this.data.obsId)
+        })
       },
     })
   },
@@ -492,20 +504,21 @@ Page({
       confirmColor: '#a67c00',
       success: (res) => {
         if (!res.confirm) return
-        const result = setObservationFeaturedForAdmin(obsId, featured)
-        if (!result.success) {
-          wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-          return
-        }
+        setObservationFeaturedForAdmin(obsId, featured).then((result) => {
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
 
-        this.setData({
-          isFeatured: featured,
-          detail: {
-            ...detail,
-            is_featured: featured,
-          },
+          this.setData({
+            isFeatured: featured,
+            detail: {
+              ...detail,
+              is_featured: featured,
+            },
+          })
+          wx.showToast({ title: featured ? '已设为精选' : '已取消精选', icon: 'success' })
         })
-        wx.showToast({ title: featured ? '已设为精选' : '已取消精选', icon: 'success' })
       },
     })
   },
@@ -536,20 +549,22 @@ Page({
 
     this.setData({ claiming: true })
 
-    try {
-      const result = claimIdentification(this.data.obsId, user.user_id)
-      if (!result.success) {
-        wx.showToast({ title: result.message, icon: 'none' })
-        return
-      }
-      wx.showToast({ title: '认领成功', icon: 'success' })
-      this.loadDetail(this.data.obsId)
-    } catch (err) {
-      console.error('onClaimIdentification error:', err)
-      wx.showToast({ title: '认领失败', icon: 'none' })
-    } finally {
-      this.setData({ claiming: false })
-    }
+    claimIdentification(this.data.obsId, user.user_id)
+      .then((result) => {
+        if (!result.success) {
+          wx.showToast({ title: result.message, icon: 'none' })
+          return
+        }
+        wx.showToast({ title: '认领成功', icon: 'success' })
+        this.loadDetail(this.data.obsId)
+      })
+      .catch((err) => {
+        console.error('onClaimIdentification error:', err)
+        wx.showToast({ title: '认领失败', icon: 'none' })
+      })
+      .finally(() => {
+        this.setData({ claiming: false })
+      })
   },
 
   onReleaseIdentification() {
@@ -563,18 +578,19 @@ Page({
       success: (res) => {
         if (!res.confirm) return
 
-        try {
-          const result = releaseIdentification(this.data.obsId, user.user_id)
-          if (!result.success) {
-            wx.showToast({ title: result.message, icon: 'none' })
-            return
-          }
-          wx.showToast({ title: '已释放', icon: 'success' })
-          this.loadDetail(this.data.obsId)
-        } catch (err) {
-          console.error('onReleaseIdentification error:', err)
-          wx.showToast({ title: '释放失败', icon: 'none' })
-        }
+        releaseIdentification(this.data.obsId, user.user_id)
+          .then((result) => {
+            if (!result.success) {
+              wx.showToast({ title: result.message, icon: 'none' })
+              return
+            }
+            wx.showToast({ title: '已释放', icon: 'success' })
+            this.loadDetail(this.data.obsId)
+          })
+          .catch((err) => {
+            console.error('onReleaseIdentification error:', err)
+            wx.showToast({ title: '释放失败', icon: 'none' })
+          })
       },
     })
   },
@@ -605,26 +621,28 @@ Page({
 
         this.setData({ identifying: true })
 
-        try {
-          const result = completeIdentification(
-            obsId,
-            user.user_id,
-            categoryName,
-            speciesRemarkInput,
-            reviewNoteInput,
-          )
-          if (!result.success) {
-            wx.showToast({ title: result.message, icon: 'none' })
-            return
-          }
-          wx.showToast({ title: '鉴定完成', icon: 'success' })
-          this.loadDetail(obsId)
-        } catch (err) {
-          console.error('onSubmitIdentification error:', err)
-          wx.showToast({ title: '提交失败', icon: 'none' })
-        } finally {
-          this.setData({ identifying: false })
-        }
+        completeIdentification(
+          obsId,
+          user.user_id,
+          categoryName,
+          speciesRemarkInput,
+          reviewNoteInput,
+        )
+          .then((result) => {
+            if (!result.success) {
+              wx.showToast({ title: result.message, icon: 'none' })
+              return
+            }
+            wx.showToast({ title: '鉴定完成', icon: 'success' })
+            this.loadDetail(obsId)
+          })
+          .catch((err) => {
+            console.error('onSubmitIdentification error:', err)
+            wx.showToast({ title: '提交失败', icon: 'none' })
+          })
+          .finally(() => {
+            this.setData({ identifying: false })
+          })
       },
     })
   },
@@ -637,13 +655,14 @@ Page({
       confirmColor: '#c45c5c',
       success: (res) => {
         if (!res.confirm) return
-        const result = hideCommentForAdmin(commentId)
-        if (!result.success) {
-          wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-          return
-        }
-        wx.showToast({ title: '已隐藏', icon: 'success' })
-        this.loadDetail(this.data.obsId)
+        hideCommentForAdmin(commentId).then((result) => {
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
+          wx.showToast({ title: '已隐藏', icon: 'success' })
+          this.loadDetail(this.data.obsId)
+        })
       },
     })
   },
@@ -666,20 +685,22 @@ Page({
 
     this.setData({ appealing: true })
 
-    try {
-      const result = submitObservationAppeal(this.data.obsId, user.user_id, reason)
-      if (!result.success) {
-        wx.showToast({ title: result.message || '提交失败', icon: 'none' })
-        return
-      }
+    submitObservationAppeal(this.data.obsId, user.user_id, reason)
+      .then((result) => {
+        if (!result.success) {
+          wx.showToast({ title: result.message || '提交失败', icon: 'none' })
+          return
+        }
 
-      wx.showToast({ title: '申诉已提交', icon: 'success' })
-      this.loadDetail(this.data.obsId)
-    } catch (err) {
-      console.error('onSubmitAppeal error:', err)
-      wx.showToast({ title: '提交失败，请重试', icon: 'none' })
-    } finally {
-      this.setData({ appealing: false })
-    }
+        wx.showToast({ title: '申诉已提交', icon: 'success' })
+        this.loadDetail(this.data.obsId)
+      })
+      .catch((err) => {
+        console.error('onSubmitAppeal error:', err)
+        wx.showToast({ title: '提交失败，请重试', icon: 'none' })
+      })
+      .finally(() => {
+        this.setData({ appealing: false })
+      })
   },
 })

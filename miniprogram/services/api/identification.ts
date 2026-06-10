@@ -9,33 +9,41 @@ import {
   type IdentificationResult,
 } from '../local/identification-api'
 import { USE_LOCAL_BACKEND } from './config'
+import {
+  claimIdentificationRemote,
+  completeIdentificationRemote,
+  countPendingIdentificationRemote,
+  getIdentificationStateRemote,
+  listIdentificationQueueRemote,
+  releaseIdentificationRemote,
+} from './remote/identification'
 
 export type { IdentificationQueueItem, IdentificationResult }
 
 export function listIdentificationQueue(reviewerId: string): Promise<IdentificationQueueItem[]> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程鉴定队列 API 待实现'))
+    return listIdentificationQueueRemote(reviewerId)
   }
   return Promise.resolve(localListIdentificationQueue(reviewerId))
 }
 
 export function countPendingIdentification(): Promise<number> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程鉴定队列 API 待实现'))
+    return countPendingIdentificationRemote()
   }
   return Promise.resolve(localCountPendingIdentification())
 }
 
 export function claimIdentification(obsId: string, reviewerId: string): Promise<IdentificationResult> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程认领鉴定 API 待实现'))
+    return claimIdentificationRemote(obsId, reviewerId)
   }
   return Promise.resolve(localClaimIdentification(obsId, reviewerId))
 }
 
 export function releaseIdentification(obsId: string, reviewerId: string): Promise<IdentificationResult> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程释放认领 API 待实现'))
+    return releaseIdentificationRemote(obsId, reviewerId)
   }
   return Promise.resolve(localReleaseIdentification(obsId, reviewerId))
 }
@@ -48,7 +56,7 @@ export function completeIdentification(
   reviewNote?: string,
 ): Promise<IdentificationResult> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程完成鉴定 API 待实现'))
+    return completeIdentificationRemote(obsId, reviewerId, categoryName, speciesRemark, reviewNote)
   }
   return Promise.resolve(
     localCompleteIdentification(obsId, reviewerId, categoryName, speciesRemark, reviewNote),
@@ -60,7 +68,7 @@ export function getIdentificationState(
   reviewerId: string,
 ): Promise<ReturnType<typeof localGetIdentificationState>> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程鉴定状态 API 待实现'))
+    return getIdentificationStateRemote(obsId, reviewerId)
   }
   return Promise.resolve(localGetIdentificationState(obsId, reviewerId))
 }

@@ -1,10 +1,10 @@
-import { getUserProfile } from '../../services/local/profile-api'
+import { getUserProfile } from '../../services/api/profile'
 import {
   clearAllNotifications,
   listUserNotifications,
   readAllNotifications,
   readNotification,
-} from '../../services/local/notification-api'
+} from '../../services/api/notification'
 import {
   formatDiaryDateLabel,
   getDiaryChartWidth,
@@ -99,60 +99,64 @@ Page({
   },
 
   refreshNotifications(userId: string) {
-    this.setData(this.buildNotificationData(userId))
+    listUserNotifications(userId).then((notifications) => {
+      this.setData(this.buildNotificationDataFromList(notifications))
+    })
   },
 
   loadProfile(userId: string) {
     this.setData({ loading: true, unavailable: false })
 
-    try {
-      const profile = getUserProfile(userId)
-      if (!profile) {
-        this.setData({ loading: false, unavailable: true })
-        return
-      }
+    getUserProfile(userId)
+      .then((profile) => {
+        if (!profile) {
+          this.setData({ loading: false, unavailable: true })
+          return
+        }
 
-      this.setData({
-        loading: false,
-        unavailable: false,
-        nickname: profile.nickname,
-        avatarUrl: profile.avatar_url,
-        roleLabel: profile.role_label,
-        shareCount: profile.stats.share_count,
-        totalLikes: profile.stats.total_likes,
-        speciesCount: profile.stats.species_count,
-        records: profile.records.map((item) => ({
-          obs_id: item.obs_id,
-          photo_url: item.photo_url,
-          note: item.note || '',
-          location_name: item.location_name,
-          species_name: item.species_name || '',
-          species_label: item.species_label || item.species_name || '',
-          status_label: item.status_label || '',
-          time_text: item.time_text,
-          like_count: item.like_count,
-          comment_count: item.comment_count,
-          is_featured: item.is_featured,
-        })),
-        speciesList: profile.species_list.map((item) => ({
-          species_name: item.species_name,
-          marker_label: item.marker_label,
-          record_count: item.record_count,
-          latest_time_text: item.latest_time_text,
-        })),
-        isObserver: canPublishObservation(getCurrentUser()),
-        ...this.buildNotificationData(userId),
-        ...this.buildDiaryData(profile.diary),
+        return listUserNotifications(userId).then((notifications) => {
+          this.setData({
+            loading: false,
+            unavailable: false,
+            nickname: profile.nickname,
+            avatarUrl: profile.avatar_url,
+            roleLabel: profile.role_label,
+            shareCount: profile.stats.share_count,
+            totalLikes: profile.stats.total_likes,
+            speciesCount: profile.stats.species_count,
+            records: profile.records.map((item) => ({
+              obs_id: item.obs_id,
+              photo_url: item.photo_url,
+              note: item.note || '',
+              location_name: item.location_name,
+              species_name: item.species_name || '',
+              species_label: item.species_label || item.species_name || '',
+              status_label: item.status_label || '',
+              time_text: item.time_text,
+              like_count: item.like_count,
+              comment_count: item.comment_count,
+              is_featured: item.is_featured,
+            })),
+            speciesList: profile.species_list.map((item) => ({
+              species_name: item.species_name,
+              marker_label: item.marker_label,
+              record_count: item.record_count,
+              latest_time_text: item.latest_time_text,
+            })),
+            isObserver: canPublishObservation(getCurrentUser()),
+            ...this.buildNotificationDataFromList(notifications),
+            ...this.buildDiaryData(profile.diary),
+          })
+        })
       })
-    } catch (err) {
-      console.error('loadProfile error:', err)
-      wx.showToast({ title: '加载失败，请重试', icon: 'none' })
-      this.setData({ loading: false, unavailable: true })
-    }
+      .catch((err) => {
+        console.error('loadProfile error:', err)
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+        this.setData({ loading: false, unavailable: true })
+      })
   },
 
-  buildNotificationData(userId: string) {
-    const notifications = listUserNotifications(userId)
+  buildNotificationDataFromList(notifications: Awaited<ReturnType<typeof listUserNotifications>>) {
     return {
       notifications: notifications.map((item) => ({
         notification_id: item.notification_id,
@@ -189,8 +193,9 @@ Page({
     const user = getCurrentUser()
     if (!user || !notificationId) return
 
-    readNotification(notificationId, user.user_id)
-    this.setData(this.buildNotificationData(user.user_id))
+    readNotification(notificationId, user.user_id).then(() => {
+      this.refreshNotifications(user.user_id)
+    })
 
     if (type === 'appeal_received') {
       wx.navigateTo({ url: '/pages/admin/moderation/moderation?tab=appeals' })
@@ -206,9 +211,10 @@ Page({
     const user = getCurrentUser()
     if (!user || this.data.unreadCount <= 0) return
 
-    readAllNotifications(user.user_id)
-    this.setData(this.buildNotificationData(user.user_id))
-    wx.showToast({ title: '已全部标为已读', icon: 'success' })
+    readAllNotifications(user.user_id).then(() => {
+      this.refreshNotifications(user.user_id)
+      wx.showToast({ title: '已全部标为已读', icon: 'success' })
+    })
   },
 
   onClearAllNotifications() {
@@ -222,9 +228,10 @@ Page({
       success: (res) => {
         if (!res.confirm) return
 
-        clearAllNotifications(user.user_id)
-        this.setData(this.buildNotificationData(user.user_id))
-        wx.showToast({ title: '已清空', icon: 'success' })
+        clearAllNotifications(user.user_id).then(() => {
+          this.refreshNotifications(user.user_id)
+          wx.showToast({ title: '已清空', icon: 'success' })
+        })
       },
     })
   },

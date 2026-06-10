@@ -1,4 +1,4 @@
-import { getSpeciesArchive } from '../../services/local/species-api'
+import { getSpeciesArchive } from '../../services/api/species'
 import type { SpeciesArchiveDetail } from '../../types/species'
 import { getCurrentUser } from '../../utils/session'
 
@@ -28,25 +28,26 @@ Page({
   loadDetail(speciesName: string) {
     this.setData({ loading: true, unavailable: false })
 
-    try {
-      const detail = getSpeciesArchive(speciesName)
-      if (!detail) {
-        this.setData({ loading: false, unavailable: true, detail: null })
-        return
-      }
+    getSpeciesArchive(speciesName)
+      .then((detail) => {
+        if (!detail) {
+          this.setData({ loading: false, unavailable: true, detail: null })
+          return
+        }
 
-      const maxLocationCount = Math.max(...detail.common_locations.map((item) => item.count), 1)
-      this.setData({
-        loading: false,
-        unavailable: false,
-        detail,
-        maxLocationCount,
+        const maxLocationCount = Math.max(...detail.common_locations.map((item) => item.count), 1)
+        this.setData({
+          loading: false,
+          unavailable: false,
+          detail,
+          maxLocationCount,
+        })
       })
-    } catch (err) {
-      console.error('loadSpeciesDetail error:', err)
-      wx.showToast({ title: '加载失败，请重试', icon: 'none' })
-      this.setData({ loading: false, unavailable: true, detail: null })
-    }
+      .catch((err) => {
+        console.error('loadSpeciesDetail error:', err)
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+        this.setData({ loading: false, unavailable: true, detail: null })
+      })
   },
 
   onPreviewPhoto(e: WechatMiniprogram.TouchEvent) {

@@ -7,17 +7,24 @@ import {
   readNotification as localReadNotification,
 } from '../local/notification-api'
 import { USE_LOCAL_BACKEND } from './config'
+import {
+  clearAllNotificationsRemote,
+  getUnreadNotificationCountRemote,
+  listUserNotificationsRemote,
+  readAllNotificationsRemote,
+  readNotificationRemote,
+} from './remote/notification'
 
 export function listUserNotifications(userId: string): Promise<NotificationItem[]> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程通知 API 待实现'))
+    return listUserNotificationsRemote(userId)
   }
   return Promise.resolve(localListUserNotifications(userId))
 }
 
 export function getUnreadNotificationCount(userId: string): Promise<number> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程通知 API 待实现'))
+    return getUnreadNotificationCountRemote(userId)
   }
   return Promise.resolve(localGetUnreadNotificationCount(userId))
 }
@@ -27,21 +34,21 @@ export function readNotification(
   userId: string,
 ): Promise<NotificationItem | null> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程通知 API 待实现'))
+    return readNotificationRemote(notificationId, userId)
   }
   return Promise.resolve(localReadNotification(notificationId, userId))
 }
 
 export function readAllNotifications(userId: string): Promise<number> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程通知 API 待实现'))
+    return readAllNotificationsRemote(userId)
   }
   return Promise.resolve(localReadAllNotifications(userId))
 }
 
 export function clearAllNotifications(userId: string): Promise<number> {
   if (!USE_LOCAL_BACKEND) {
-    return Promise.reject(new Error('远程通知 API 待实现'))
+    return clearAllNotificationsRemote(userId)
   }
   return Promise.resolve(localClearAllNotifications(userId))
 }

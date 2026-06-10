@@ -22,6 +22,8 @@
         placeholder="给自己起个昵称吧"
         value="{{nickname}}"
         bindinput="onNicknameInput"
+        bindnicknamereview="onNicknameReview"
+        bindblur="onNicknameBlur"
       />
     </view>
 

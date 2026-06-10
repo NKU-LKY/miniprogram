@@ -22,11 +22,46 @@ Page({
     this.setData({ nickname: e.detail.value })
   },
 
+  /** 点击「使用微信昵称」时触发，bindinput 不一定会被调用 */
+  onNicknameReview(e: WechatMiniprogram.CustomEvent<{ nickname: string }>) {
+    const nickname = (e.detail && e.detail.nickname) || ''
+    if (nickname.trim()) {
+      this.setData({ nickname: nickname.trim() })
+    }
+  },
+
+  onNicknameBlur(e: WechatMiniprogram.Input) {
+    const value = (e.detail.value || '').trim()
+    if (value) {
+      this.setData({ nickname: value })
+    }
+  },
+
+  readNicknameFromInput(): Promise<string> {
+    return new Promise((resolve) => {
+      wx.createSelectorQuery()
+        .select('.input')
+        .fields({ properties: ['value'] })
+        .exec((res) => {
+          const value = res[0] && (res[0] as { value?: string }).value
+          resolve(typeof value === 'string' ? value.trim() : '')
+        })
+    })
+  },
+
   async onRegister() {
     if (this.data.loading) return
 
-    const { nickname, avatarUrl } = this.data
-    if (!nickname.trim()) {
+    let { nickname, avatarUrl } = this.data
+    nickname = nickname.trim()
+    if (!nickname) {
+      nickname = await this.readNicknameFromInput()
+      if (nickname) {
+        this.setData({ nickname })
+      }
+    }
+
+    if (!nickname) {
       wx.showToast({ title: '请输入昵称', icon: 'none' })
       return
     }
@@ -34,7 +69,7 @@ Page({
     this.setData({ loading: true })
     try {
       const result = await registerObserver({
-        nickname: nickname.trim(),
+        nickname,
         avatar_url: avatarUrl,
       })
 

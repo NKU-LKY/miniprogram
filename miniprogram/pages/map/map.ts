@@ -1,4 +1,4 @@
-import { getFeedLocationOptions, getFeedSpeciesOptions, listMapObservations } from '../../services/local/observation-api'
+import { getFeedLocationOptions, getFeedSpeciesOptions, listMapObservations } from '../../services/api/observation'
 import { CAMPUS_MAP_CENTER, CAMPUS_MAP_SCALE } from '../../data/locations'
 import type { MapLocationGroup, MapObservationItem } from '../../types/observation'
 import { getDeviceLocation } from '../../utils/geo'
@@ -57,23 +57,25 @@ Page({
   },
 
   refreshFilterOptions() {
-    const speciesOptions = getFeedSpeciesOptions()
-    const locationOptions = getFeedLocationOptions()
-    const speciesIndex = Math.min(this.data.speciesIndex, Math.max(speciesOptions.length - 1, 0))
-    const locationIndex = Math.min(this.data.locationIndex, Math.max(locationOptions.length - 1, 0))
+    void Promise.all([getFeedSpeciesOptions(), getFeedLocationOptions()]).then(
+      ([speciesOptions, locationOptions]) => {
+        const speciesIndex = Math.min(this.data.speciesIndex, Math.max(speciesOptions.length - 1, 0))
+        const locationIndex = Math.min(this.data.locationIndex, Math.max(locationOptions.length - 1, 0))
 
-    this.setData({
-      speciesOptions,
-      locationOptions,
-      speciesIndex,
-      locationIndex,
-      filterActive: isFilterActive(
-        speciesIndex,
-        this.data.timeIndex,
-        this.data.featuredOnly,
-        locationIndex,
-      ),
-    })
+        this.setData({
+          speciesOptions,
+          locationOptions,
+          speciesIndex,
+          locationIndex,
+          filterActive: isFilterActive(
+            speciesIndex,
+            this.data.timeIndex,
+            this.data.featuredOnly,
+            locationIndex,
+          ),
+        })
+      },
+    )
   },
 
   getCurrentFilter(): ObservationFilterParams {
@@ -110,34 +112,34 @@ Page({
   },
 
   loadMapData() {
-    try {
-      const mapItems = listMapObservations(this.getCurrentFilter())
-      const locationGroups = groupMapObservationsByLocation(mapItems)
-      const markers = buildMapMarkers(locationGroups)
-      const markerIndexMap: Record<number, string> = {}
+    listMapObservations(this.getCurrentFilter())
+      .then((mapItems) => {
+        const locationGroups = groupMapObservationsByLocation(mapItems)
+        const markers = buildMapMarkers(locationGroups)
+        const markerIndexMap: Record<number, string> = {}
 
-      locationGroups.forEach((group, index) => {
-        markerIndexMap[index + 1] = group.location_key
+        locationGroups.forEach((group, index) => {
+          markerIndexMap[index + 1] = group.location_key
+        })
+
+        const activeKey = this.data.activeLocation && this.data.activeLocation.location_key
+        const activeLocation =
+          activeKey ? locationGroups.find((group) => group.location_key === activeKey) || null : null
+
+        this.setData({
+          mapItems,
+          locationGroups,
+          markers,
+          markerIndexMap,
+          locationCount: locationGroups.length,
+          activeLocation,
+          showLocationSheet: Boolean(activeLocation),
+        })
       })
-
-      const activeKey = this.data.activeLocation && this.data.activeLocation.location_key
-      const activeLocation =
-        activeKey ? locationGroups.find((group) => group.location_key === activeKey) || null : null
-
-      this.setData({
-        mapItems,
-        locationGroups,
-        markers,
-        markerIndexMap,
-        locationCount: locationGroups.length,
-        activeLocation,
-        showLocationSheet: Boolean(activeLocation),
-        sheetVisible: Boolean(activeLocation),
+      .catch((err) => {
+        console.error('loadMapData error:', err)
+        wx.showToast({ title: '加载失败', icon: 'none' })
       })
-    } catch (err) {
-      console.error('loadMapData error:', err)
-      wx.showToast({ title: '地图数据加载失败', icon: 'none' })
-    }
   },
 
   onSwitchMode(e: WechatMiniprogram.TouchEvent) {

@@ -2,8 +2,8 @@ import {
   claimIdentification,
   listIdentificationQueue,
   releaseIdentification,
-} from '../../../services/local/identification-api'
-import type { IdentificationQueueItem } from '../../../services/local/identification-api'
+} from '../../../services/api/identification'
+import type { IdentificationQueueItem } from '../../../services/api/identification'
 import { getCurrentUser } from '../../../utils/session'
 
 Page({
@@ -28,18 +28,19 @@ Page({
   loadQueue(reviewerId: string) {
     this.setData({ loading: true, forbidden: false })
 
-    try {
-      const queueList = listIdentificationQueue(reviewerId)
-      this.setData({
-        queueList,
-        pendingCount: queueList.length,
-        loading: false,
+    listIdentificationQueue(reviewerId)
+      .then((queueList) => {
+        this.setData({
+          queueList,
+          pendingCount: queueList.length,
+          loading: false,
+        })
       })
-    } catch (err) {
-      console.error('loadQueue error:', err)
-      wx.showToast({ title: '加载失败', icon: 'none' })
-      this.setData({ loading: false })
-    }
+      .catch((err) => {
+        console.error('loadQueue error:', err)
+        wx.showToast({ title: '加载失败', icon: 'none' })
+        this.setData({ loading: false })
+      })
   },
 
   onClaim(e: WechatMiniprogram.TouchEvent) {
@@ -49,20 +50,22 @@ Page({
 
     this.setData({ claimingId: obsId })
 
-    try {
-      const result = claimIdentification(obsId, user.user_id)
-      if (!result.success) {
-        wx.showToast({ title: result.message, icon: 'none' })
-        return
-      }
-      wx.showToast({ title: '认领成功', icon: 'success' })
-      this.loadQueue(user.user_id)
-    } catch (err) {
-      console.error('onClaim error:', err)
-      wx.showToast({ title: '认领失败', icon: 'none' })
-    } finally {
-      this.setData({ claimingId: '' })
-    }
+    claimIdentification(obsId, user.user_id)
+      .then((result) => {
+        if (!result.success) {
+          wx.showToast({ title: result.message, icon: 'none' })
+          return
+        }
+        wx.showToast({ title: '认领成功', icon: 'success' })
+        this.loadQueue(user.user_id)
+      })
+      .catch((err) => {
+        console.error('onClaim error:', err)
+        wx.showToast({ title: '认领失败', icon: 'none' })
+      })
+      .finally(() => {
+        this.setData({ claimingId: '' })
+      })
   },
 
   onRelease(e: WechatMiniprogram.TouchEvent) {
@@ -79,20 +82,22 @@ Page({
 
         this.setData({ releasingId: obsId })
 
-        try {
-          const result = releaseIdentification(obsId, user.user_id)
-          if (!result.success) {
-            wx.showToast({ title: result.message, icon: 'none' })
-            return
-          }
-          wx.showToast({ title: '已释放', icon: 'success' })
-          this.loadQueue(user.user_id)
-        } catch (err) {
-          console.error('onRelease error:', err)
-          wx.showToast({ title: '释放失败', icon: 'none' })
-        } finally {
-          this.setData({ releasingId: '' })
-        }
+        releaseIdentification(obsId, user.user_id)
+          .then((result) => {
+            if (!result.success) {
+              wx.showToast({ title: result.message, icon: 'none' })
+              return
+            }
+            wx.showToast({ title: '已释放', icon: 'success' })
+            this.loadQueue(user.user_id)
+          })
+          .catch((err) => {
+            console.error('onRelease error:', err)
+            wx.showToast({ title: '释放失败', icon: 'none' })
+          })
+          .finally(() => {
+            this.setData({ releasingId: '' })
+          })
       },
     })
   },

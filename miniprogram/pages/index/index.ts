@@ -1,8 +1,15 @@
-import { countPendingIdentification } from '../../services/local/identification-api'
-import { getUnreadNotificationCount } from '../../services/local/notification-api'
-import { findUserById } from '../../services/local/user-store'
-import { getFeedLocationOptions, getFeedSpeciesOptions, getMyLocationOptions, getMySpeciesOptions, listFeed, listMyFeed } from '../../services/local/observation-api'
-import { listSpeciesArchives } from '../../services/local/species-api'
+import { findUserById } from '../../services/api/auth'
+import { countPendingIdentification } from '../../services/api/identification'
+import { getUnreadNotificationCount } from '../../services/api/notification'
+import {
+  getFeedLocationOptions,
+  getFeedSpeciesOptions,
+  getMyLocationOptions,
+  getMySpeciesOptions,
+  listFeed,
+  listMyFeed,
+} from '../../services/api/observation'
+import { listSpeciesArchives } from '../../services/api/species'
 import type { ObservationFeedItem } from '../../types/observation'
 import type { SpeciesArchiveSummary } from '../../types/species'
 import { ROLE_LABELS } from '../../types/user'
@@ -16,7 +23,7 @@ import {
 } from '../../utils/observation-filter'
 import { isOnboardingCompleted, markOnboardingCompleted } from '../../utils/onboarding'
 import { canPublishObservation } from '../../utils/permissions'
-import { clearSession, getCurrentUser, refreshSessionUser } from '../../utils/session'
+import { clearSession, getCurrentUser, setSession } from '../../utils/session'
 
 /** 每页 6 条，与一屏可见数量一致，上滑加载下一页 */
 const PAGE_SIZE = 6
@@ -165,7 +172,11 @@ Page({
   },
 
   onLoad() {
-    if (!this.ensureLoggedIn()) return
+    void this.bootstrapPage()
+  },
+
+  async bootstrapPage() {
+    if (!(await this.ensureLoggedIn())) return
     this.syncUserInfo()
     this.refreshFilterOptions()
     this.loadFeed(true)
@@ -176,7 +187,11 @@ Page({
   },
 
   onShow() {
-    if (!this.ensureLoggedIn()) return
+    void this.handleShow()
+  },
+
+  async handleShow() {
+    if (!(await this.ensureLoggedIn())) return
     this.syncUserInfo()
     this.refreshFilterOptions()
     this.handlePublishReturn()
@@ -186,17 +201,21 @@ Page({
     this.tryStartOnboarding()
   },
 
-  ensureLoggedIn(): boolean {
-    const refreshed = refreshSessionUser((userId) => {
-      const user = findUserById(userId)
-      if (!user) return null
-      const { password_hash: _, ...safe } = user
-      return safe
-    })
-    if (!refreshed) {
+  async ensureLoggedIn(): Promise<boolean> {
+    const user = getCurrentUser()
+    if (!user) {
       wx.redirectTo({ url: '/pages/login/login' })
       return false
     }
+
+    const latest = await findUserById(user.user_id)
+    if (!latest || latest.status === 'banned') {
+      clearSession()
+      wx.redirectTo({ url: '/pages/login/login' })
+      return false
+    }
+
+    setSession(latest)
     return true
   },
 
@@ -212,8 +231,18 @@ Page({
       isObserver: canPublishObservation(user),
       isReviewer,
       isAdmin: user.role === 'admin',
-      pendingIdentificationCount: isReviewer ? countPendingIdentification() : 0,
-      hasUnreadNotifications: getUnreadNotificationCount(user.user_id) > 0,
+      pendingIdentificationCount: 0,
+      hasUnreadNotifications: false,
+    })
+
+    void Promise.all([
+      isReviewer ? countPendingIdentification() : Promise.resolve(0),
+      getUnreadNotificationCount(user.user_id),
+    ]).then(([pendingIdentificationCount, unreadCount]) => {
+      this.setData({
+        pendingIdentificationCount,
+        hasUnreadNotifications: unreadCount > 0,
+      })
     })
   },
 
@@ -260,30 +289,31 @@ Page({
     const user = getCurrentUser()
     const observationsSource =
       this.data.activeTab === 'feed' ? 'feed' : 'mine'
-    const speciesOptions =
+
+    void Promise.all([
       observationsSource === 'feed'
         ? getFeedSpeciesOptions()
-        : getMySpeciesOptions((user && user.user_id) || '')
-    const locationOptions =
+        : getMySpeciesOptions((user && user.user_id) || ''),
       observationsSource === 'feed'
         ? getFeedLocationOptions()
-        : getMyLocationOptions((user && user.user_id) || '')
+        : getMyLocationOptions((user && user.user_id) || ''),
+    ]).then(([speciesOptions, locationOptions]) => {
+      const speciesIndex = Math.min(this.data.speciesIndex, Math.max(speciesOptions.length - 1, 0))
+      const locationIndex = Math.min(this.data.locationIndex, Math.max(locationOptions.length - 1, 0))
 
-    const speciesIndex = Math.min(this.data.speciesIndex, Math.max(speciesOptions.length - 1, 0))
-    const locationIndex = Math.min(this.data.locationIndex, Math.max(locationOptions.length - 1, 0))
-
-    this.setData({
-      speciesOptions,
-      locationOptions,
-      speciesIndex,
-      locationIndex,
-      filterActive: isFilterActive(
+      this.setData({
+        speciesOptions,
+        locationOptions,
         speciesIndex,
-        this.data.timeIndex,
-        this.data.featuredOnly,
         locationIndex,
-        this.data.searchKeyword,
-      ),
+        filterActive: isFilterActive(
+          speciesIndex,
+          this.data.timeIndex,
+          this.data.featuredOnly,
+          locationIndex,
+          this.data.searchKeyword,
+        ),
+      })
     })
   },
 
@@ -517,19 +547,20 @@ Page({
   loadSpeciesArchives() {
     this.setData({ speciesLoading: true })
 
-    try {
-      const speciesList = listSpeciesArchives()
-      this.setData({
-        speciesList,
-        speciesLoading: false,
-        speciesLoaded: true,
-        refreshing: false,
+    listSpeciesArchives()
+      .then((speciesList) => {
+        this.setData({
+          speciesList,
+          speciesLoading: false,
+          speciesLoaded: true,
+          refreshing: false,
+        })
       })
-    } catch (err) {
-      console.error('loadSpeciesArchives error:', err)
-      wx.showToast({ title: '加载失败，请重试', icon: 'none' })
-      this.setData({ speciesLoading: false, refreshing: false })
-    }
+      .catch((err) => {
+        console.error('loadSpeciesArchives error:', err)
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+        this.setData({ speciesLoading: false, refreshing: false })
+      })
   },
 
   loadFeed(reset: boolean, filterOverride?: ObservationFilterParams) {
@@ -543,30 +574,31 @@ Page({
     const page = reset ? 1 : this.data.page
     const filter = filterOverride || this.getCurrentFilter()
 
-    try {
-      const result = listFeed(page, PAGE_SIZE, filter)
-      const newItems = result.list.map(flattenItem)
-      const feedList = reset ? newItems : this.data.feedList.concat(newItems)
+    listFeed(page, PAGE_SIZE, filter)
+      .then((result) => {
+        const newItems = result.list.map(flattenItem)
+        const feedList = reset ? newItems : this.data.feedList.concat(newItems)
 
-      this.setData({
-        feedList,
-        page: page + 1,
-        hasMore: result.hasMore,
-        loading: false,
-        loadingMore: false,
-        refreshing: false,
-      }, () => {
-        this.updateStatusBar()
-        if (result.hasMore) {
-          this.ensureFillViewport()
-        }
+        this.setData({
+          feedList,
+          page: page + 1,
+          hasMore: result.hasMore,
+          loading: false,
+          loadingMore: false,
+          refreshing: false,
+        }, () => {
+          this.updateStatusBar()
+          if (result.hasMore) {
+            this.ensureFillViewport()
+          }
+        })
       })
-    } catch (err) {
-      console.error('loadFeed error:', err)
-      wx.showToast({ title: '加载失败，请重试', icon: 'none' })
-      this.setData({ loading: false, loadingMore: false, refreshing: false })
-      this.updateStatusBar()
-    }
+      .catch((err) => {
+        console.error('loadFeed error:', err)
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+        this.setData({ loading: false, loadingMore: false, refreshing: false })
+        this.updateStatusBar()
+      })
   },
 
   loadMyFeed(reset: boolean, filterOverride?: ObservationFilterParams) {
@@ -583,31 +615,32 @@ Page({
     const page = reset ? 1 : this.data.myPage
     const filter = filterOverride || this.getCurrentFilter()
 
-    try {
-      const result = listMyFeed(user.user_id, page, PAGE_SIZE, filter)
-      const newItems = result.list.map(flattenItem)
-      const myList = reset ? newItems : this.data.myList.concat(newItems)
+    listMyFeed(user.user_id, page, PAGE_SIZE, filter)
+      .then((result) => {
+        const newItems = result.list.map(flattenItem)
+        const myList = reset ? newItems : this.data.myList.concat(newItems)
 
-      this.setData({
-        myList,
-        myPage: page + 1,
-        myHasMore: result.hasMore,
-        myLoaded: true,
-        myLoading: false,
-        myLoadingMore: false,
-        refreshing: false,
-      }, () => {
-        this.updateStatusBar()
-        if (result.hasMore) {
-          this.ensureFillViewport()
-        }
+        this.setData({
+          myList,
+          myPage: page + 1,
+          myHasMore: result.hasMore,
+          myLoaded: true,
+          myLoading: false,
+          myLoadingMore: false,
+          refreshing: false,
+        }, () => {
+          this.updateStatusBar()
+          if (result.hasMore) {
+            this.ensureFillViewport()
+          }
+        })
       })
-    } catch (err) {
-      console.error('loadMyFeed error:', err)
-      wx.showToast({ title: '加载失败，请重试', icon: 'none' })
-      this.setData({ myLoading: false, myLoadingMore: false, refreshing: false })
-      this.updateStatusBar()
-    }
+      .catch((err) => {
+        console.error('loadMyFeed error:', err)
+        wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+        this.setData({ myLoading: false, myLoadingMore: false, refreshing: false })
+        this.updateStatusBar()
+      })
   },
 
   onPullDownRefresh() {

@@ -11,7 +11,7 @@ import {
   type ModerationAppealItem,
   type ModerationCommentItem,
   type ModerationObsItem,
-} from '../../../services/local/admin-api'
+} from '../../../services/api/admin'
 import { getCurrentUser } from '../../../utils/session'
 
 type ActiveTab = 'observations' | 'comments' | 'appeals'
@@ -74,31 +74,33 @@ Page({
   loadData() {
     this.setData({ loading: true, forbidden: false })
 
-    try {
-      const obsResult = listObservationsForModeration()
-      const commentResult = listCommentsForModeration()
-      const appealResult = listAppealsForModeration()
+    Promise.all([
+      listObservationsForModeration(),
+      listCommentsForModeration(),
+      listAppealsForModeration(),
+    ])
+      .then(([obsResult, commentResult, appealResult]) => {
+        if (
+          isAccessError(obsResult) ||
+          isAccessError(commentResult) ||
+          isAccessError(appealResult)
+        ) {
+          this.setData({ loading: false, forbidden: true })
+          return
+        }
 
-      if (
-        isAccessError(obsResult) ||
-        isAccessError(commentResult) ||
-        isAccessError(appealResult)
-      ) {
-        this.setData({ loading: false, forbidden: true })
-        return
-      }
-
-      this.setData({
-        obsList: obsResult,
-        commentList: commentResult,
-        appealList: appealResult,
-        loading: false,
+        this.setData({
+          obsList: obsResult,
+          commentList: commentResult,
+          appealList: appealResult,
+          loading: false,
+        })
       })
-    } catch (err) {
-      console.error('loadData error:', err)
-      wx.showToast({ title: '加载失败', icon: 'none' })
-      this.setData({ loading: false })
-    }
+      .catch((err) => {
+        console.error('loadData error:', err)
+        wx.showToast({ title: '加载失败', icon: 'none' })
+        this.setData({ loading: false })
+      })
   },
 
   onHideObservation(e: WechatMiniprogram.TouchEvent) {
@@ -109,13 +111,14 @@ Page({
       confirmColor: '#c45c5c',
       success: (res) => {
         if (!res.confirm) return
-        const result = hideObservationForAdmin(obsId)
-        if (!result.success) {
-          wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-          return
-        }
-        wx.showToast({ title: '已隐藏', icon: 'success' })
-        this.loadData()
+        hideObservationForAdmin(obsId).then((result) => {
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
+          wx.showToast({ title: '已隐藏', icon: 'success' })
+          this.loadData()
+        })
       },
     })
   },
@@ -128,13 +131,14 @@ Page({
       confirmColor: '#4c8c4a',
       success: (res) => {
         if (!res.confirm) return
-        const result = restoreObservationForAdmin(obsId)
-        if (!result.success) {
-          wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-          return
-        }
-        wx.showToast({ title: '已恢复', icon: 'success' })
-        this.loadData()
+        restoreObservationForAdmin(obsId).then((result) => {
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
+          wx.showToast({ title: '已恢复', icon: 'success' })
+          this.loadData()
+        })
       },
     })
   },
@@ -154,13 +158,14 @@ Page({
       confirmColor: '#a67c00',
       success: (res) => {
         if (!res.confirm) return
-        const result = setObservationFeaturedForAdmin(obsId, featured)
-        if (!result.success) {
-          wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-          return
-        }
-        wx.showToast({ title: featured ? '已设为精选' : '已取消精选', icon: 'success' })
-        this.loadData()
+        setObservationFeaturedForAdmin(obsId, featured).then((result) => {
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
+          wx.showToast({ title: featured ? '已设为精选' : '已取消精选', icon: 'success' })
+          this.loadData()
+        })
       },
     })
   },
@@ -173,13 +178,14 @@ Page({
       confirmColor: '#c45c5c',
       success: (res) => {
         if (!res.confirm) return
-        const result = hideCommentForAdmin(commentId)
-        if (!result.success) {
-          wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-          return
-        }
-        wx.showToast({ title: '已隐藏', icon: 'success' })
-        this.loadData()
+        hideCommentForAdmin(commentId).then((result) => {
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
+          wx.showToast({ title: '已隐藏', icon: 'success' })
+          this.loadData()
+        })
       },
     })
   },
@@ -203,13 +209,14 @@ Page({
       confirmColor: '#4c8c4a',
       success: (res) => {
         if (!res.confirm) return
-        const result = approveAppealForAdmin(appealId)
-        if (!result.success) {
-          wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-          return
-        }
-        wx.showToast({ title: '已恢复展示', icon: 'success' })
-        this.loadData()
+        approveAppealForAdmin(appealId).then((result) => {
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
+          wx.showToast({ title: '已恢复展示', icon: 'success' })
+          this.loadData()
+        })
       },
     })
   },
@@ -222,13 +229,14 @@ Page({
       confirmColor: '#c45c5c',
       success: (res) => {
         if (!res.confirm) return
-        const result = rejectAppealForAdmin(appealId)
-        if (!result.success) {
-          wx.showToast({ title: result.message || '操作失败', icon: 'none' })
-          return
-        }
-        wx.showToast({ title: '已驳回申诉', icon: 'success' })
-        this.loadData()
+        rejectAppealForAdmin(appealId).then((result) => {
+          if (!result.success) {
+            wx.showToast({ title: result.message || '操作失败', icon: 'none' })
+            return
+          }
+          wx.showToast({ title: '已驳回申诉', icon: 'success' })
+          this.loadData()
+        })
       },
     })
   },

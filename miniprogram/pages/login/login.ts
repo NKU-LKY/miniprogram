@@ -47,7 +47,7 @@ Page({
       const result = await loginObserver()
       if (!result.success || !result.user) {
         wx.showToast({ title: result.message || '登录失败', icon: 'none' })
-        if (result.message && result.message.includes('尚未注册')) {
+        if (result.message && /尚未注册|请先注册|不存在/.test(result.message)) {
           setTimeout(() => this.goRegister(), 1500)
         }
         return
@@ -67,7 +67,7 @@ Page({
 
     this.setData({ loading: true })
     try {
-      const result = loginStaff({ username, password, role: activeRole })
+      const result = await loginStaff({ username, password, role: activeRole })
       if (!result.success || !result.user) {
         wx.showToast({ title: result.message || '登录失败', icon: 'none' })
         return

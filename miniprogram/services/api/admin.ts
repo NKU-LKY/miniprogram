@@ -1,5 +1,6 @@
-import type { AdminUserListItem, UserRole } from '../../types/user'
 import type { ModerationAppealItem } from '../../types/appeal'
+import type { AdminUserListItem, UserRole } from '../../types/user'
+import { requireAdmin } from '../../utils/permissions'
 import {
   approveAppealForAdmin as localApproveAppeal,
   hideCommentForAdmin as localHideComment,
@@ -18,89 +19,115 @@ import {
   type ModerationObsItem,
 } from '../local/admin-api'
 import { USE_LOCAL_BACKEND } from './config'
+import {
+  approveAppealRemote,
+  hideCommentForAdminRemote,
+  hideObservationForAdminRemote,
+  listAppealsForModerationRemote,
+  listCommentsForModerationRemote,
+  listObservationsForModerationRemote,
+  listUsersForAdminRemote,
+  rejectAppealRemote,
+  restoreObservationForAdminRemote,
+  setObservationFeaturedForAdminRemote,
+  setUserBanForAdminRemote,
+  setUserRoleForAdminRemote,
+} from './remote/admin'
 
 export type { AdminActionResult, ModerationAppealItem, ModerationCommentItem, ModerationObsItem }
 
-export function listUsersForAdmin(): AdminUserListItem[] | { error: string } {
+export function listUsersForAdmin(): Promise<AdminUserListItem[] | { error: string }> {
+  const admin = requireAdmin()
+  if (!admin) return Promise.resolve({ error: '无权限访问' })
+
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return listUsersForAdminRemote(admin.user_id).catch(() => ({ error: '加载失败' }))
   }
-  return localListUsers()
+  return Promise.resolve(localListUsers())
 }
 
-export function setUserRoleForAdmin(targetUserId: string, role: UserRole): AdminActionResult {
+export function setUserRoleForAdmin(targetUserId: string, role: UserRole): Promise<AdminActionResult> {
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return setUserRoleForAdminRemote(targetUserId, role)
   }
-  return localSetUserRole(targetUserId, role)
+  return Promise.resolve(localSetUserRole(targetUserId, role))
 }
 
-export function setUserBanForAdmin(targetUserId: string, banned: boolean): AdminActionResult {
+export function setUserBanForAdmin(targetUserId: string, banned: boolean): Promise<AdminActionResult> {
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return setUserBanForAdminRemote(targetUserId, banned)
   }
-  return localSetUserBan(targetUserId, banned)
+  return Promise.resolve(localSetUserBan(targetUserId, banned))
 }
 
-export function listObservationsForModeration(): ModerationObsItem[] | { error: string } {
+export function listObservationsForModeration(): Promise<ModerationObsItem[] | { error: string }> {
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return listObservationsForModerationRemote().catch(() => ({ error: '加载失败' }))
   }
-  return localListObservations()
+  return Promise.resolve(localListObservations())
 }
 
-export function listCommentsForModeration(): ModerationCommentItem[] | { error: string } {
+export function listCommentsForModeration(): Promise<ModerationCommentItem[] | { error: string }> {
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return listCommentsForModerationRemote().catch(() => ({ error: '加载失败' }))
   }
-  return localListComments()
+  return Promise.resolve(localListComments())
 }
 
-export function hideObservationForAdmin(obsId: string): AdminActionResult {
+export function hideObservationForAdmin(obsId: string): Promise<AdminActionResult> {
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return hideObservationForAdminRemote(obsId)
   }
-  return localHideObservation(obsId)
+  return Promise.resolve(localHideObservation(obsId))
 }
 
-export function restoreObservationForAdmin(obsId: string): AdminActionResult {
+export function restoreObservationForAdmin(obsId: string): Promise<AdminActionResult> {
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return restoreObservationForAdminRemote(obsId)
   }
-  return localRestoreObservation(obsId)
+  return Promise.resolve(localRestoreObservation(obsId))
 }
 
-export function setObservationFeaturedForAdmin(obsId: string, featured: boolean): AdminActionResult {
+export function setObservationFeaturedForAdmin(
+  obsId: string,
+  featured: boolean,
+): Promise<AdminActionResult> {
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return setObservationFeaturedForAdminRemote(obsId, featured)
   }
-  return localSetObservationFeatured(obsId, featured)
+  return Promise.resolve(localSetObservationFeatured(obsId, featured))
 }
 
-export function hideCommentForAdmin(commentId: string): AdminActionResult {
+export function hideCommentForAdmin(commentId: string): Promise<AdminActionResult> {
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return hideCommentForAdminRemote(commentId)
   }
-  return localHideComment(commentId)
+  return Promise.resolve(localHideComment(commentId))
 }
 
-export function listAppealsForModeration(): ModerationAppealItem[] | { error: string } {
+export function listAppealsForModeration(): Promise<ModerationAppealItem[] | { error: string }> {
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return listAppealsForModerationRemote().catch(() => ({ error: '加载失败' }))
   }
-  return localListAppeals()
+  return Promise.resolve(localListAppeals())
 }
 
-export function approveAppealForAdmin(appealId: string): AdminActionResult {
+export function approveAppealForAdmin(appealId: string): Promise<AdminActionResult> {
+  const admin = requireAdmin()
+  if (!admin) return Promise.resolve({ success: false, message: '无权限操作' })
+
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return approveAppealRemote(appealId, admin.user_id)
   }
-  return localApproveAppeal(appealId)
+  return Promise.resolve(localApproveAppeal(appealId))
 }
 
-export function rejectAppealForAdmin(appealId: string): AdminActionResult {
+export function rejectAppealForAdmin(appealId: string): Promise<AdminActionResult> {
+  const admin = requireAdmin()
+  if (!admin) return Promise.resolve({ success: false, message: '无权限操作' })
+
   if (!USE_LOCAL_BACKEND) {
-    throw new Error('远程管理员 API 待实现')
+    return rejectAppealRemote(appealId, admin.user_id)
   }
-  return localRejectAppeal(appealId)
+  return Promise.resolve(localRejectAppeal(appealId))
 }
