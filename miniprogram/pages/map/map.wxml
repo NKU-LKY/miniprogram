@@ -36,6 +36,7 @@
       enable-rotate="{{false}}"
       enable-cluster
       bindmarkertap="onMarkerTap"
+      bindlabeltap="onMarkerTap"
       bindcallouttap="onMarkerTap"
       binderror="onMapError"
     ></map>
