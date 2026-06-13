@@ -63,12 +63,12 @@ Component({
       wx.getSystemInfo({
         success: (res) => {
           const isAndroid = res.platform === 'android'
-          const isDevtools = res.platform === 'devtools'
+          const topInset = res.statusBarHeight || res.safeArea?.top || 0
           this.setData({
             ios: !isAndroid,
             innerPaddingRight: `padding-right: ${res.windowWidth - rect.left}px`,
-            leftWidth: `width: ${res.windowWidth - rect.left }px`,
-            safeAreaTop: isDevtools || isAndroid ? `height: calc(var(--height) + ${res.safeArea.top}px); padding-top: ${res.safeArea.top}px` : ``
+            leftWidth: `width: ${res.windowWidth - rect.left}px`,
+            safeAreaTop: `height: calc(var(--height) + ${topInset}px); padding-top: ${topInset}px`,
           })
         }
       })
