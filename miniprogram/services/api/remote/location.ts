@@ -32,22 +32,14 @@ export async function findOrCreateLocation(params: {
     query: { page: 1, pageSize: 20, keyword },
   })
 
-  const sameName = listed.list.find((item) => item.name === keyword)
-  if (sameName) {
-    const existingDetail = (sameName.description || '').trim()
-
-    if (!detail || detail === existingDetail) {
-      if (detail && !existingDetail) {
-        const updated = await request<RemoteLocation>(`/api/locations/${sameName.locationId}`, {
-          method: 'PUT',
-          data: { description: detail },
-        })
-        locationByIdCache.set(updated.locationId, updated)
-        return updated.locationId
-      }
-      locationByIdCache.set(sameName.locationId, sameName)
-      return sameName.locationId
-    }
+  const exact = listed.list.find((item) => {
+    if (item.name !== keyword) return false
+    const existingDetail = (item.description || '').trim()
+    return existingDetail === detail
+  })
+  if (exact) {
+    locationByIdCache.set(exact.locationId, exact)
+    return exact.locationId
   }
 
   const created = await request<RemoteLocation>('/api/locations', {

@@ -87,34 +87,67 @@ export async function prefetchSpeciesForPosts(posts: RemotePost[]): Promise<void
   await Promise.all([...pending].map((id) => getSpeciesById(id)))
 }
 
+async function findSpeciesByStoredName(storedName: string): Promise<RemoteSpecies | null> {
+  const listed = await request<PaginatedResult<RemoteSpecies>>('/api/species', {
+    query: { page: 1, pageSize: 50, keyword: storedName },
+  })
+  return listed.list.find((item) => item.speciesName === storedName) || null
+}
+
+async function findLegacySpeciesPair(
+  remark: string,
+  category: string,
+): Promise<RemoteSpecies | null> {
+  const listed = await request<PaginatedResult<RemoteSpecies>>('/api/species', {
+    query: { page: 1, pageSize: 50, keyword: remark },
+  })
+  return (
+    listed.list.find(
+      (item) =>
+        item.speciesName === remark && (item.description || '').trim() === category,
+    ) || null
+  )
+}
+
 export async function findOrCreateSpecies(category?: string, remark?: string): Promise<number | undefined> {
   const payload = encodeSpeciesPayload(category, remark)
-  const name = payload.speciesName.trim()
-  if (!name) return undefined
+  const storedName = payload.speciesName.trim()
+  if (!storedName) return undefined
 
-  const listed = await request<PaginatedResult<RemoteSpecies>>('/api/species', {
-    query: { page: 1, pageSize: 20, keyword: name },
-  })
+  const cat = (category || '').trim()
+  const rem = (remark || '').trim()
 
-  const exact = listed.list.find(
-    (item) =>
-      item.speciesName === name &&
-      (payload.description ? item.description === payload.description : true),
-  )
-  if (exact) {
-    if (exact.speciesId) speciesByIdCache.set(exact.speciesId, exact)
-    return exact.speciesId
+  let existing = await findSpeciesByStoredName(storedName)
+  if (!existing && cat && rem) {
+    existing = await findLegacySpeciesPair(rem, cat)
   }
 
-  const created = await request<RemoteSpecies>('/api/species', {
-    method: 'POST',
-    data: {
-      speciesName: name,
-      description: payload.description || null,
-    },
-  })
-  if (created.speciesId) speciesByIdCache.set(created.speciesId, created)
-  return created.speciesId
+  if (existing?.speciesId) {
+    speciesByIdCache.set(existing.speciesId, existing)
+    return existing.speciesId
+  }
+
+  try {
+    const created = await request<RemoteSpecies>('/api/species', {
+      method: 'POST',
+      data: {
+        speciesName: storedName,
+        description: payload.description || null,
+      },
+    })
+    if (created.speciesId) speciesByIdCache.set(created.speciesId, created)
+    return created.speciesId
+  } catch (err) {
+    const message = err instanceof Error ? err.message : ''
+    if (!message.includes('已存在')) throw err
+
+    const duplicate =
+      (await findSpeciesByStoredName(storedName)) ||
+      (cat && rem ? await findLegacySpeciesPair(rem, cat) : null)
+    if (!duplicate?.speciesId) throw err
+    speciesByIdCache.set(duplicate.speciesId, duplicate)
+    return duplicate.speciesId
+  }
 }
 
 export async function createPostForObservation(obsId: number, featured = false): Promise<RemotePost> {

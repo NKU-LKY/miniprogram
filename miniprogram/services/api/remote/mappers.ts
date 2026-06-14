@@ -1,4 +1,4 @@
-import { isValidSpeciesCategory } from '../../../data/species-categories'
+import { isValidSpeciesCategory, SPECIES_CATEGORY_NAMES } from '../../../data/species-categories'
 import type { ObservationCommentThreadItem } from '../../../types/comment'
 import type { NotificationItem, NotificationType } from '../../../types/notification'
 import type {
@@ -82,6 +82,25 @@ export function parseLocationDetail(location?: RemoteLocation | null): string | 
   return detail
 }
 
+/** 解析「备注@大类」复合物种名（大类固定，从右匹配） */
+export function parseCompositeSpeciesName(
+  speciesName: string,
+): { category: string; remark: string } | null {
+  const name = speciesName.trim()
+  if (!name) return null
+
+  for (const category of SPECIES_CATEGORY_NAMES) {
+    const suffix = `@${category}`
+    if (name.endsWith(suffix) && name.length > suffix.length) {
+      return {
+        category,
+        remark: name.slice(0, -suffix.length),
+      }
+    }
+  }
+  return null
+}
+
 /** 将后端物种解析为前端「大类 + 备注」 */
 export function parseSpeciesFields(species: RemoteSpecies | null | undefined): {
   species_name?: string
@@ -92,6 +111,14 @@ export function parseSpeciesFields(species: RemoteSpecies | null | undefined): {
   const desc = (species.description || '').trim()
   const name = (species.speciesName || '').trim()
   if (!name && !desc) return {}
+
+  const composite = parseCompositeSpeciesName(name)
+  if (composite) {
+    return {
+      species_name: composite.category,
+      species_remark: composite.remark,
+    }
+  }
 
   if (desc && isValidSpeciesCategory(desc)) {
     return {
@@ -133,7 +160,7 @@ export function encodeSpeciesPayload(
   const rem = (remark || '').trim()
 
   if (cat && rem) {
-    return { speciesName: rem, description: cat }
+    return { speciesName: `${rem}@${cat}`, description: cat }
   }
   if (cat) {
     return { speciesName: cat, description: cat }
