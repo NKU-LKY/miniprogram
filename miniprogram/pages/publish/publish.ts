@@ -15,14 +15,48 @@ const REFRESH_FEED_KEY = 'campus_bio_refresh_feed'
 
 let draftSaveTimer = 0
 
-function savePhoto(tempPath: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    wx.saveFile({
-      tempFilePath: tempPath,
-      success: (res) => resolve(res.savedFilePath),
-      fail: () => resolve(tempPath),
+function getFileSystemManager(): WechatMiniprogram.FileSystemManager {
+  return wx.getFileSystemManager()
+}
+
+function isTempPhotoPath(path: string): boolean {
+  return /[/\\]tmp[/\\]|wxfile:\/\/tmp|\/tmp_/i.test(path)
+}
+
+function photoFileExists(path: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    getFileSystemManager().access({
+      path,
+      success: () => resolve(true),
+      fail: () => resolve(false),
     })
   })
+}
+
+/** 将临时照片持久化到本地，供草稿恢复后仍可上传 */
+function persistPhotoPath(path: string): Promise<string> {
+  if (!isTempPhotoPath(path)) {
+    return photoFileExists(path).then((exists) => {
+      if (exists) return path
+      throw new Error('暂存照片已失效，请重新选择')
+    })
+  }
+
+  return new Promise((resolve, reject) => {
+    getFileSystemManager().saveFile({
+      tempFilePath: path,
+      success: (res) => resolve(res.savedFilePath),
+      fail: () => reject(new Error('照片暂存失败，请重新选择')),
+    })
+  })
+}
+
+async function resolvePhotoForUpload(path: string): Promise<string> {
+  if (!path) throw new Error('请至少上传一张照片')
+  if (!(await photoFileExists(path))) {
+    throw new Error('暂存照片已失效，请重新选择')
+  }
+  return path
 }
 
 Page({
@@ -60,26 +94,42 @@ Page({
 
     const draft = loadPublishDraft(user.user_id)
     if (draft) {
-      this.setData({
-        photoPath: draft.photoPath || '',
-        note: draft.note || '',
-        locationName: draft.locationName || '',
-        locationDetail: draft.locationDetail || '',
-        latitude: draft.latitude || 0,
-        longitude: draft.longitude || 0,
-        hasLocation: draft.hasLocation === true,
-        speciesCategoryIndex: draft.speciesCategoryIndex ?? -1,
-        speciesCategoryName: draft.speciesCategoryName || '',
-        speciesRemark: draft.speciesRemark || '',
-        needsIdentification: draft.needsIdentification === true,
-        saveDraftEnabled: true,
-        locationFailed: false,
-      })
-      wx.showToast({ title: '已恢复上次填写内容', icon: 'none' })
+      void this.restoreDraft(draft)
       return
     }
 
     this.locateByDevice()
+  },
+
+  async restoreDraft(draft: PublishDraft) {
+    let photoPath = draft.photoPath || ''
+    let photoExpired = false
+
+    if (photoPath && !(await photoFileExists(photoPath))) {
+      photoPath = ''
+      photoExpired = true
+    }
+
+    this.setData({
+      photoPath,
+      note: draft.note || '',
+      locationName: draft.locationName || '',
+      locationDetail: draft.locationDetail || '',
+      latitude: draft.latitude || 0,
+      longitude: draft.longitude || 0,
+      hasLocation: draft.hasLocation === true,
+      speciesCategoryIndex: draft.speciesCategoryIndex ?? -1,
+      speciesCategoryName: draft.speciesCategoryName || '',
+      speciesRemark: draft.speciesRemark || '',
+      needsIdentification: draft.needsIdentification === true,
+      saveDraftEnabled: true,
+      locationFailed: false,
+    })
+
+    wx.showToast({
+      title: photoExpired ? '已恢复内容，请重新选择照片' : '已恢复上次填写内容',
+      icon: 'none',
+    })
   },
 
   onHide() {
@@ -108,7 +158,14 @@ Page({
 
     let photoPath = this.data.photoPath
     if (photoPath) {
-      photoPath = await savePhoto(photoPath)
+      try {
+        photoPath = await persistPhotoPath(photoPath)
+      } catch (err) {
+        console.warn('persistDraft photo error:', err)
+        if (isTempPhotoPath(photoPath)) {
+          photoPath = ''
+        }
+      }
     }
 
     const draft: PublishDraft = {
@@ -169,8 +226,13 @@ Page({
       success: (res) => {
         const tempPath = res.tempFiles[0] && res.tempFiles[0].tempFilePath
         if (tempPath) {
-          this.setData({ photoPath: tempPath })
-          this.scheduleSaveDraft()
+          this.setData({ photoPath: tempPath }, () => {
+            if (this.data.saveDraftEnabled) {
+              void this.persistDraft()
+            } else {
+              this.scheduleSaveDraft()
+            }
+          })
         }
       },
     })
@@ -284,7 +346,7 @@ Page({
     this.setData({ submitting: true })
 
     try {
-      const photoUrl = await savePhoto(this.data.photoPath)
+      const photoUrl = await resolvePhotoForUpload(this.data.photoPath)
       await createObservation({
         user_id: user.user_id,
         photo_url: photoUrl,
@@ -306,7 +368,8 @@ Page({
       }, 800)
     } catch (err) {
       console.error('publish error:', err)
-      wx.showToast({ title: '发布失败，请重试', icon: 'none' })
+      const message = err instanceof Error ? err.message : '发布失败，请重试'
+      wx.showToast({ title: message, icon: 'none' })
       this.setData({ submitting: false })
     }
   },
